@@ -38,6 +38,29 @@ Get organization liquidity analytics.
 }
 ```
 
+### GET /organizations/:id/transactions
+Get all transactions for an organization (with entity traceability).
+
+**Response:**
+```json
+{
+  "success": true,
+  "transactions": [
+    {
+      "displayCode": "TXN-000005",
+      "type": "inflow",
+      "fromEntity": "Ali Khan",
+      "toEntity": "HMR Builders",
+      "amountUSDT": "2500.000000",
+      "propertyId": "uuid...",
+      "status": "completed",
+      "description": "Liquidity inflow from Ali Khan",
+      "createdAt": "2025-10-17T14:32:01.123Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## 2. Users (Admin)

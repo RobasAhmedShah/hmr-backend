@@ -35,5 +35,11 @@ export class OrganizationsController {
       lastUpdated: org.updatedAt,
     };
   }
+
+  @Get(':id/transactions')
+  async getTransactions(@Param('id') id: string) {
+    const transactions = await this.organizationsService.findTransactions(id);
+    return { success: true, transactions };
+  }
 }
 

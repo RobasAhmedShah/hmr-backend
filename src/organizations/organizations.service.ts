@@ -45,5 +45,17 @@ export class OrganizationsService {
       return this.orgRepo.findOne({ where: { displayCode: idOrCode } });
     }
   }
+
+  async findTransactions(idOrCode: string) {
+    // Check if it's a UUID format
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrCode);
+    
+    const org = await this.orgRepo.findOne({
+      where: isUuid ? { id: idOrCode } : { displayCode: idOrCode },
+      relations: ['transactions'],
+    });
+    
+    return org?.transactions || [];
+  }
 }
 

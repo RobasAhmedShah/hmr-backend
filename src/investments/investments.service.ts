@@ -44,11 +44,18 @@ export class InvestmentsService {
       const isUserIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
       
       let actualUserId = userId;
+      let user: User;
       if (!isUserIdUuid) {
         // Find user by displayCode to get their UUID
-        const user = await manager.findOne(User, { where: { displayCode: userId } });
-        if (!user) throw new NotFoundException('User not found');
+        const foundUser = await manager.findOne(User, { where: { displayCode: userId } });
+        if (!foundUser) throw new NotFoundException('User not found');
+        user = foundUser;
         actualUserId = user.id;
+      } else {
+        // Fetch user by UUID
+        const foundUser = await manager.findOne(User, { where: { id: userId } });
+        if (!foundUser) throw new NotFoundException('User not found');
+        user = foundUser;
       }
       
       const wallet = await manager.findOne(Wallet, {
@@ -89,18 +96,6 @@ export class InvestmentsService {
       const txnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
       const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
       
-      const txn = manager.create(Transaction, {
-        userId: actualUserId,  // Use actualUserId (UUID) not displayCode
-        walletId: wallet.id,
-        type: 'investment',
-        amountUSDT,
-        status: 'completed',
-        referenceId: savedInvestment.id,
-        description: `Investment in ${property.title}`,
-        displayCode: txnDisplayCode,
-      });
-      await manager.save(Transaction, txn);
-
       // Step 9: Credit liquidity to the organization (property holder)
       const organization = await manager.findOne(Organization, {
         where: { id: property.organizationId },
@@ -111,20 +106,44 @@ export class InvestmentsService {
       organization.liquidityUSDT = (organization.liquidityUSDT as Decimal).plus(amountUSDT);
       await manager.save(Organization, organization);
 
-      // Step 10: Record organization-side transaction (inflow)
+      // Get user display name for traceability
+      const userDisplayName = user.fullName || user.email;
+      const orgDisplayName = organization.name;
+
+      // Step 10: Record user-side transaction with entity traceability
+      const txn = manager.create(Transaction, {
+        userId: actualUserId,
+        walletId: wallet.id,
+        organizationId: organization.id,
+        propertyId: property.id,
+        type: 'investment',
+        amountUSDT,
+        status: 'completed',
+        referenceId: savedInvestment.id,
+        description: `Investment in ${property.title}`,
+        fromEntity: userDisplayName,  // Human-readable sender
+        toEntity: orgDisplayName,      // Human-readable receiver
+        displayCode: txnDisplayCode,
+      });
+      await manager.save(Transaction, txn);
+
+      // Step 11: Record organization-side transaction (inflow)
       // Generate displayCode for organization transaction
       const orgTxnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
       const orgTxnDisplayCode = `TXN-${orgTxnResult[0].nextval.toString().padStart(6, '0')}`;
 
       const orgTxn = manager.create(Transaction, {
-        userId: actualUserId,  // Keep for reference, but this is an org transaction
+        userId: actualUserId,
         walletId: wallet.id,
         organizationId: organization.id,
+        propertyId: property.id,
         type: 'inflow',
         amountUSDT,
         status: 'completed',
         referenceId: savedInvestment.id,
-        description: `Liquidity inflow from investment ${invDisplayCode}`,
+        description: `Liquidity inflow from ${userDisplayName}`,
+        fromEntity: userDisplayName,  // Human-readable sender
+        toEntity: orgDisplayName,      // Human-readable receiver
         displayCode: orgTxnDisplayCode,
       });
       await manager.save(Transaction, orgTxn);

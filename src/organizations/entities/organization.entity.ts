@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { DecimalTransformer } from '../../common/decimal.transformer';
 import Decimal from 'decimal.js';
+import { Transaction } from '../../transactions/entities/transaction.entity';
 
 @Entity('organizations')
 export class Organization {
@@ -25,6 +26,9 @@ export class Organization {
 
   @Column('numeric', { precision: 18, scale: 6, default: 0, transformer: DecimalTransformer })
   liquidityUSDT: Decimal;
+
+  @OneToMany(() => Transaction, txn => txn.organization)
+  transactions?: Transaction[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

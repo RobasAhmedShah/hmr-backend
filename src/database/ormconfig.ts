@@ -8,7 +8,7 @@ const config: TypeOrmModuleOptions = {
   url: process.env.DATABASE_URL,
   ssl: true,
   autoLoadEntities: true,
-  synchronize: false,
+  synchronize: true,
   extra: {
     ssl: { rejectUnauthorized: false },
   },
