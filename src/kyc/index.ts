@@ -1,0 +1,3 @@
+export * from './kyc.module';
+
+

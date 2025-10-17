@@ -5,10 +5,13 @@ dotenv.config();
 
 const config: TypeOrmModuleOptions = {
   type: 'postgres',
-  url: process.env.DATABASE_URL,  // Neon connection string
-  ssl: true,                      // Neon requires SSL
-  autoLoadEntities: true,         // automatically load entities from modules
-  synchronize: true,              // only for development; disable in prod
+  url: process.env.DATABASE_URL,
+  ssl: true,
+  autoLoadEntities: true,
+  synchronize: false,
+  extra: {
+    ssl: { rejectUnauthorized: false },
+  },
 };
 
 export default config;
