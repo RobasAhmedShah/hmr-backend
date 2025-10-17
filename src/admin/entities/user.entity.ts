@@ -1,21 +1,34 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
+  @Column({ type: 'varchar', length: 32, unique: true })
+  displayCode: string;
+
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  fullName: string;
 
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 50, default: 'user' })
-  role: string;
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  phone?: string | null;
 
-  @CreateDateColumn({ type: 'timestamp with time zone' })
+  @Column({ type: 'varchar', length: 20, default: 'user' })
+  role: 'user' | 'admin';
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }
 
 
