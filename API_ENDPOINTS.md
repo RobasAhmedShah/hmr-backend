@@ -168,12 +168,17 @@ Create investment (new token-based method):
 - Validates `property.availableTokens >= tokensToBuy` and `wallet.balance >= amountUSDT`
 - Computes `amountUSDT = tokensToBuy * pricePerTokenUSDT`
 - Decrements `property.availableTokens` and `wallet.balanceUSDT`
-- Inserts investment + transaction records
+- Credits organization liquidity
+- Creates **one unified transaction** (type: "investment") with traceability
 - Auto-generates `INV-xxxxxx` displayCode
 
 **Body:**
 ```json
-npm 
+{
+  "userId": "<uuid>",
+  "propertyId": "<uuid>",
+  "tokensToBuy": 2.5
+}
 ```
 
 ### GET /investments
@@ -192,10 +197,12 @@ Get investment by UUID or displayCode (e.g., INV-000001).
 ## 6. Rewards
 
 ### POST /rewards/distribute
-Distribute ROI proportionally across all confirmed investments for a property (per plan/phase2.md):
-- Calculates `roiShare = (tokensOwned / totalTokens) * totalRoi`
+Distribute ROI proportionally across all confirmed investments for a property:
+- Groups all investments by user
+- Calculates total `roiShare = (totalUserTokens / totalTokens) * totalRoi` per user
 - Credits each investor's `wallet.balanceUSDT`
-- Inserts reward + transaction records
+- Creates **one reward and one transaction per user** (aggregated across all their investments)
+- Each transaction includes full traceability: `fromEntity`, `toEntity`, `propertyId`, `organizationId`
 - Auto-generates `RWD-xxxxxx` displayCode for each reward
 
 **Body:**
@@ -298,4 +305,7 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
 - Sequential `displayCode` fields (USR/ORG/PROP/INV/TXN/RWD) are auto-generated via Postgres sequences.
 - Investment flow uses pessimistic locks to prevent race conditions.
 - Validation is enabled globally (class-validator).
+- **Transactions**: Each investment creates one unified transaction (type: "investment") with full traceability.
+- **Rewards**: ROI distribution creates one reward and one transaction per user (aggregated across all their investments in a property).
+- **Traceability**: All transactions include `fromEntity`, `toEntity`, `propertyId`, and `organizationId` for complete audit trails.
 

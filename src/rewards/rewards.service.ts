@@ -8,6 +8,7 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { Property } from '../properties/entities/property.entity';
 import { User } from '../admin/entities/user.entity';
+import { Organization } from '../organizations/entities/organization.entity';
 import { DistributeRoiDto } from './dto/distribute-roi.dto';
 
 @Injectable()
@@ -43,34 +44,47 @@ export class RewardsService {
       const totalTokens = property.totalTokens as Decimal;
       const rewards: Reward[] = [];
 
-      // Step: roiShare = (tokensOwned / totalTokens) * totalROI (plan/phase2.md L164)
+      // Group investments by userId to aggregate rewards per user
+      const investmentsByUser = new Map<string, Investment[]>();
       for (const investment of investments) {
-        const tokensOwned = investment.tokensPurchased as Decimal;
-        const roiShare = tokensOwned.div(totalTokens).mul(totalRoi);
+        if (!investmentsByUser.has(investment.userId)) {
+          investmentsByUser.set(investment.userId, []);
+        }
+        investmentsByUser.get(investment.userId)!.push(investment);
+      }
+
+      // Process rewards per user (aggregate all their investments)
+      for (const [userId, userInvestments] of investmentsByUser) {
+        // Calculate total ROI share for this user across all their investments
+        let totalUserTokens = new Decimal(0);
+        for (const investment of userInvestments) {
+          totalUserTokens = totalUserTokens.plus(investment.tokensPurchased as Decimal);
+        }
+        
+        const roiShare = totalUserTokens.div(totalTokens).mul(totalRoi);
 
         // Fetch wallet with lock
         const wallet = await manager
           .createQueryBuilder(Wallet, 'wallet')
-          .where('wallet.userId = :userId', { userId: investment.userId })
+          .where('wallet.userId = :userId', { userId })
           .setLock('pessimistic_write')
           .getOne();
 
         if (!wallet) {
-          throw new Error(`Wallet not found for user ${investment.userId}`);
+          throw new Error(`Wallet not found for user ${userId}`);
         }
 
-        // Credit wallet.balanceUSDT += roiShare (plan/phase2.md L168)
+        // Credit wallet.balanceUSDT += roiShare
         wallet.balanceUSDT = (wallet.balanceUSDT as Decimal).plus(roiShare);
         await manager.save(Wallet, wallet);
 
-        // Insert reward rows (plan/phase2.md L167)
-        // Generate displayCode for reward
+        // Create one reward record per user (referencing the first investment for backward compatibility)
         const rewardResult = await manager.query('SELECT nextval(\'reward_display_seq\') as nextval');
         const rewardDisplayCode = `RWD-${rewardResult[0].nextval.toString().padStart(6, '0')}`;
         
         const reward = manager.getRepository(Reward).create({
-          userId: investment.userId,
-          investmentId: investment.id,
+          userId,
+          investmentId: userInvestments[0].id, // Reference first investment
           amountUSDT: roiShare,
           type: 'roi',
           description: `ROI distribution for property ${property.title}`,
@@ -80,19 +94,30 @@ export class RewardsService {
         const savedReward = await manager.save(Reward, reward);
         rewards.push(savedReward);
 
-        // Insert transaction(type = reward) (plan/phase2.md L169)
-        // Generate displayCode for transaction
+        // Get user display name for traceability
+        const user = await manager.findOne(User, { where: { id: userId } });
+        const userDisplayName = user?.fullName || user?.email || 'Unknown User';
+        
+        // Get organization display name for traceability
+        const organization = await manager.findOne(Organization, { where: { id: property.organizationId } });
+        const orgDisplayName = organization?.name || 'Unknown Organization';
+
+        // Create one transaction per user with full traceability
         const txnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
         const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
         
         const txn = manager.getRepository(Transaction).create({
-          userId: investment.userId,
+          userId,
           walletId: wallet.id,
+          organizationId: property.organizationId,
+          propertyId: property.id,
           type: 'reward',
           amountUSDT: roiShare,
           status: 'completed',
           referenceId: savedReward.id,
           description: `ROI reward for ${property.title}`,
+          fromEntity: orgDisplayName,  // Human-readable sender (organization)
+          toEntity: userDisplayName,   // Human-readable receiver (user)
           displayCode: txnDisplayCode,
         });
         await manager.save(Transaction, txn);

@@ -110,7 +110,7 @@ export class InvestmentsService {
       const userDisplayName = user.fullName || user.email;
       const orgDisplayName = organization.name;
 
-      // Step 10: Record user-side transaction with entity traceability
+      // Step 10: Record unified transaction with entity traceability
       const txn = manager.create(Transaction, {
         userId: actualUserId,
         walletId: wallet.id,
@@ -126,27 +126,6 @@ export class InvestmentsService {
         displayCode: txnDisplayCode,
       });
       await manager.save(Transaction, txn);
-
-      // Step 11: Record organization-side transaction (inflow)
-      // Generate displayCode for organization transaction
-      const orgTxnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
-      const orgTxnDisplayCode = `TXN-${orgTxnResult[0].nextval.toString().padStart(6, '0')}`;
-
-      const orgTxn = manager.create(Transaction, {
-        userId: actualUserId,
-        walletId: wallet.id,
-        organizationId: organization.id,
-        propertyId: property.id,
-        type: 'inflow',
-        amountUSDT,
-        status: 'completed',
-        referenceId: savedInvestment.id,
-        description: `Liquidity inflow from ${userDisplayName}`,
-        fromEntity: userDisplayName,  // Human-readable sender
-        toEntity: orgDisplayName,      // Human-readable receiver
-        displayCode: orgTxnDisplayCode,
-      });
-      await manager.save(Transaction, orgTxn);
 
       return savedInvestment;
     });

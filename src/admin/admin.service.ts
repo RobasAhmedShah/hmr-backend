@@ -20,6 +20,10 @@ export class AdminService {
   }
 
   async create(data: Partial<User>) {
+    if (!data) {
+      throw new Error('User data is required');
+    }
+    
     return this.dataSource.transaction(async (manager) => {
       const users = manager.getRepository(User);
       const wallets = manager.getRepository(Wallet);
@@ -29,8 +33,8 @@ export class AdminService {
       const displayCode = `USR-${result[0].nextval.toString().padStart(6, '0')}`;
       
       const user = users.create({
-        fullName: data.fullName ?? (data as any).name,
-        email: data.email!,
+        fullName: data.fullName ?? (data as any).name ?? 'Unknown User',
+        email: data.email ?? 'unknown@example.com',
         phone: (data as any).phone ?? null,
         role: (data.role as any) ?? 'user',
         isActive: (data as any).isActive ?? true,
