@@ -173,7 +173,19 @@ export class InvestmentsService {
   }
 
   async findByUserId(userId: string) {
-    return this.investmentRepo.find({ where: { userId }, relations: ['property'] });
+    // Check if userId is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    
+    if (isUuid) {
+      return this.investmentRepo.find({ where: { userId }, relations: ['property'] });
+    } else {
+      // It's a display code, find the user first to get their UUID
+      const user = await this.dataSource.getRepository(User).findOne({ where: { displayCode: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return this.investmentRepo.find({ where: { userId: user.id }, relations: ['property'] });
+    }
   }
 
   async findOne(id: string) {

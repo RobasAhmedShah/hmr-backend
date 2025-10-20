@@ -25,7 +25,7 @@ export class Organization {
   logoUrl?: string | null;
 
   @Column('numeric', { precision: 18, scale: 6, default: 0, transformer: DecimalTransformer })
-  liquidityUSDT: Decimal;
+  liquidityUSDT: Decimal = new Decimal(0);
 
   @OneToMany(() => Transaction, txn => txn.organization)
   transactions?: Transaction[];

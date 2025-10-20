@@ -1,0 +1,243 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-10-20T10:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2025.1.0",
+  "resources": [
+    {
+      "_id": "wrk_hmr_backend",
+      "_type": "workspace",
+      "name": "HMR Backend API",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_hmr_backend",
+      "_type": "environment",
+      "parentId": "wrk_hmr_backend",
+      "name": "Base Environment",
+      "data": {
+        "hmr_url": "http://localhost:3000"
+      }
+    },
+    {
+      "_id": "req_create_org",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /organizations",
+      "method": "POST",
+      "url": "{{ hmr_url }}/organizations",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"HMR Builders\",\n  \"description\": \"Leading real estate developer\",\n  \"website\": \"https://hmrbuilders.com\",\n  \"logoUrl\": \"https://example.com/logo.png\"\n}"
+      }
+    },
+    {
+      "_id": "req_get_orgs",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /organizations",
+      "method": "GET",
+      "url": "{{ hmr_url }}/organizations"
+    },
+    {
+      "_id": "req_get_org_by_id",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /organizations/:id",
+      "method": "GET",
+      "url": "{{ hmr_url }}/organizations/ORG-000001"
+    },
+    {
+      "_id": "req_get_org_liquidity",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /organizations/:id/liquidity",
+      "method": "GET",
+      "url": "{{ hmr_url }}/organizations/ORG-000001/liquidity"
+    },
+    {
+      "_id": "req_get_org_txns",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /organizations/:id/transactions",
+      "method": "GET",
+      "url": "{{ hmr_url }}/organizations/ORG-000001/transactions"
+    },
+    {
+      "_id": "req_create_user",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /admin/users",
+      "method": "POST",
+      "url": "{{ hmr_url }}/admin/users",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fullName\": \"Ali Khan\",\n  \"email\": \"ali@example.com\",\n  \"phone\": \"+92300123456\",\n  \"role\": \"user\"\n}"
+      }
+    },
+    {
+      "_id": "req_get_users",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /admin/users",
+      "method": "GET",
+      "url": "{{ hmr_url }}/admin/users"
+    },
+    {
+      "_id": "req_create_property",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /properties",
+      "method": "POST",
+      "url": "{{ hmr_url }}/properties",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"organizationId\": \"ORG-000001\",\n  \"title\": \"Marina View Residences\",\n  \"slug\": \"marina-view-residences\",\n  \"description\": \"Luxury waterfront apartments\",\n  \"type\": \"residential\",\n  \"status\": \"active\",\n  \"totalValueUSDT\": 1000000,\n  \"totalTokens\": 1000,\n  \"expectedROI\": 10,\n  \"city\": \"Karachi\",\n  \"country\": \"Pakistan\",\n  \"features\": {\"amenities\": [\"pool\", \"gym\"]},\n  \"images\": [\"https://example.com/img1.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_get_properties",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /properties",
+      "method": "GET",
+      "url": "{{ hmr_url }}/properties"
+    },
+    {
+      "_id": "req_get_property_slug",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /properties?slug=",
+      "method": "GET",
+      "url": "{{ hmr_url }}/properties?slug=marina-view-residences"
+    },
+    {
+      "_id": "req_get_property_code",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /properties?displayCode=",
+      "method": "GET",
+      "url": "{{ hmr_url }}/properties?displayCode=PROP-000001"
+    },
+    {
+      "_id": "req_get_property_by_id",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /properties/:id",
+      "method": "GET",
+      "url": "{{ hmr_url }}/properties/PROP-000001"
+    },
+    {
+      "_id": "req_wallet_deposit",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /wallet/deposit",
+      "method": "POST",
+      "url": "{{ hmr_url }}/wallet/deposit",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"<uuid>\",\n  \"amountUSDT\": 5000\n}"
+      }
+    },
+    {
+      "_id": "req_get_wallet_user",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /wallet/user/:userId",
+      "method": "GET",
+      "url": "{{ hmr_url }}/wallet/user/<uuid>"
+    },
+    {
+      "_id": "req_get_wallets",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /wallet",
+      "method": "GET",
+      "url": "{{ hmr_url }}/wallet"
+    },
+    {
+      "_id": "req_invest_legacy",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /investments (legacy)",
+      "method": "POST",
+      "url": "{{ hmr_url }}/investments",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"<uuid>\",\n  \"propertyId\": \"<uuid>\",\n  \"amountUSDT\": 2500\n}"
+      }
+    },
+    {
+      "_id": "req_invest_new",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /investments/invest (token-based)",
+      "method": "POST",
+      "url": "{{ hmr_url }}/investments/invest",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"userId\": \"<uuid>\",\n  \"propertyId\": \"<uuid>\",\n  \"tokensToBuy\": 2.5\n}"
+      }
+    },
+    {
+      "_id": "req_get_investments",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /investments",
+      "method": "GET",
+      "url": "{{ hmr_url }}/investments"
+    },
+    {
+      "_id": "req_get_investments_user",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /investments?userId=",
+      "method": "GET",
+      "url": "{{ hmr_url }}/investments?userId=<uuid>"
+    },
+    {
+      "_id": "req_get_investment_id",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /investments/:id",
+      "method": "GET",
+      "url": "{{ hmr_url }}/investments/INV-000001"
+    },
+    {
+      "_id": "req_distribute_rewards",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "POST /rewards/distribute",
+      "method": "POST",
+      "url": "{{ hmr_url }}/rewards/distribute",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"propertyId\": \"<uuid>\",\n  \"totalRoiUSDT\": 100000\n}"
+      }
+    },
+    {
+      "_id": "req_get_rewards",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /rewards",
+      "method": "GET",
+      "url": "{{ hmr_url }}/rewards"
+    },
+    {
+      "_id": "req_get_rewards_user",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /rewards?userId=",
+      "method": "GET",
+      "url": "{{ hmr_url }}/rewards?userId=<uuid>"
+    },
+    {
+      "_id": "req_get_reward_id",
+      "_type": "request",
+      "parentId": "wrk_hmr_backend",
+      "name": "GET /rewards/:id",
+      "method": "GET",
+      "url": "{{ hmr_url }}/rewards/RWD-000001"
+    }
+  ]
+}

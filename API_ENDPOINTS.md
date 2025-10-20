@@ -19,6 +19,8 @@ Create a new organization (auto-generates `ORG-xxxxxx` displayCode).
 }
 ```
 
+**Note:** `liquidityUSDT` is automatically set to 0 when creating a new organization.
+
 ### GET /organizations
 List all organizations.
 
@@ -107,6 +109,8 @@ Create a property (auto-computes `pricePerTokenUSDT = totalValueUSDT / totalToke
 }
 ```
 
+**Note:** `organizationId` can be either a UUID or a display code (e.g., "ORG-000001").
+
 ### GET /properties
 List all properties.
 
@@ -136,6 +140,8 @@ Deposit USDT into wallet (credits `balanceUSDT`; inserts deposit transaction).
 
 ### GET /wallet/user/:userId
 Get wallet for a specific user.
+
+**Note:** `userId` can be either a UUID or a display code (e.g., "USR-000001").
 
 ### GET /wallet
 List all wallets.
@@ -176,6 +182,8 @@ List all investments.
 ### GET /investments?userId=<uuid>
 Get investments for a specific user.
 
+**Note:** `userId` can be either a UUID or a display code (e.g., "USR-000001").
+
 ### GET /investments/:id
 Get investment by UUID or displayCode (e.g., INV-000001).
 
@@ -203,6 +211,8 @@ List all rewards.
 
 ### GET /rewards?userId=<uuid>
 Get rewards for a specific user.
+
+**Note:** `userId` can be either a UUID or a display code (e.g., "USR-000001").
 
 ### GET /rewards/:id
 Get reward by UUID or displayCode (e.g., RWD-000001).

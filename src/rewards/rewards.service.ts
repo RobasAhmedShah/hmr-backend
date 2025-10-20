@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import Decimal from 'decimal.js';
@@ -7,6 +7,7 @@ import { Investment } from '../investments/entities/investment.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { Property } from '../properties/entities/property.entity';
+import { User } from '../admin/entities/user.entity';
 import { DistributeRoiDto } from './dto/distribute-roi.dto';
 
 @Injectable()
@@ -106,7 +107,19 @@ export class RewardsService {
   }
 
   async findByUserId(userId: string) {
-    return this.rewardRepo.find({ where: { userId }, relations: ['investment'] });
+    // Check if userId is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    
+    if (isUuid) {
+      return this.rewardRepo.find({ where: { userId }, relations: ['investment'] });
+    } else {
+      // It's a display code, find the user first to get their UUID
+      const user = await this.dataSource.getRepository(User).findOne({ where: { displayCode: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return this.rewardRepo.find({ where: { userId: user.id }, relations: ['investment'] });
+    }
   }
 
   async findOne(id: string) {

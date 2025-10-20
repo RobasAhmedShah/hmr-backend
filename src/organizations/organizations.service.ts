@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import Decimal from 'decimal.js';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
@@ -19,6 +20,7 @@ export class OrganizationsService {
     const org = this.orgRepo.create({
       ...dto,
       displayCode,
+      liquidityUSDT: new Decimal(0), // Explicitly set default value
     });
     return this.orgRepo.save(org);
   }

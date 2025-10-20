@@ -4,12 +4,15 @@ import { Repository } from 'typeorm';
 import Decimal from 'decimal.js';
 import { Property } from './entities/property.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { Organization } from '../organizations/entities/organization.entity';
 
 @Injectable()
 export class PropertiesService {
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
+    @InjectRepository(Organization)
+    private readonly orgRepo: Repository<Organization>,
   ) {}
 
   async create(dto: CreatePropertyDto) {
@@ -17,12 +20,26 @@ export class PropertiesService {
     const totalTokens = new Decimal(dto.totalTokens);
     const price = totalValue.div(totalTokens);
     
+    // Resolve organizationId from display code if needed
+    let organizationId = dto.organizationId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.organizationId);
+    
+    if (!isUuid) {
+      // It's a display code, find the organization
+      const org = await this.orgRepo.findOne({ where: { displayCode: dto.organizationId } });
+      if (!org) {
+        throw new Error(`Organization with display code '${dto.organizationId}' not found`);
+      }
+      organizationId = org.id;
+    }
+    
     // Generate displayCode using sequence
     const result = await this.propertyRepo.query('SELECT nextval(\'property_display_seq\') as nextval');
     const displayCode = `PROP-${result[0].nextval.toString().padStart(6, '0')}`;
     
     const property = this.propertyRepo.create({
       ...dto,
+      organizationId,
       status: dto.status ?? 'planning',
       totalValueUSDT: totalValue,
       totalTokens: totalTokens,
