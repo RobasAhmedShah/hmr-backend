@@ -68,7 +68,13 @@ Get all transactions for an organization (with entity traceability).
 ## 2. Users (Admin)
 
 ### POST /admin/users
-Create a user (auto-creates wallet; auto-generates `USR-xxxxxx` displayCode).
+Create a user (auto-creates wallet, KYC verification, and portfolio; auto-generates `USR-xxxxxx` displayCode).
+
+**Auto-Creation Flow:**
+1. **User** - Creates user with displayCode
+2. **Wallet** - Creates wallet with zero balances
+3. **KYC Verification** - Creates KYC record with `status: "pending"` and `type: "cnic"`
+4. **Portfolio** - Creates portfolio with zero values and `activeInvestments: 0`
 
 **Body:**
 ```json
@@ -79,6 +85,26 @@ Create a user (auto-creates wallet; auto-generates `USR-xxxxxx` displayCode).
   "role": "user"
 }
 ```
+
+**Response:**
+```json
+{
+  "id": "uuid...",
+  "displayCode": "USR-000001",
+  "fullName": "Ali Khan",
+  "email": "ali@example.com",
+  "phone": "+92300123456",
+  "role": "user",
+  "isActive": true,
+  "createdAt": "2025-10-17T14:32:01.123Z"
+}
+```
+
+**Note:** This endpoint automatically creates 4 related records:
+- User record with displayCode
+- Wallet with zero USDT balances
+- KYC verification with "pending" status
+- Portfolio with zero investment values
 
 ### GET /admin/users
 List all users.
@@ -194,7 +220,44 @@ Get investment by UUID or displayCode (e.g., INV-000001).
 
 ---
 
-## 6. Rewards
+## 6. Portfolio
+
+### GET /portfolio/user/:userId/detailed
+Get comprehensive portfolio for a specific user.
+
+**Note**: userId can be UUID or displayCode (e.g., "USR-000001")
+
+**Auto-Update Triggers**:
+- Portfolio automatically updates when user makes investment
+- Portfolio automatically updates when user receives rewards
+- No manual POST endpoint needed
+
+**Response includes**:
+- User information (id, displayCode, name, email)
+- Portfolio summary (totalInvested, totalRewards, totalROI, activeInvestments)
+- Summary statistics (totalCurrentValue, netROI, averageROI)
+- Investments array with property details, organization, tokens, current value, rewards per investment
+- Rewards history with property context
+
+---
+
+## 7. Transactions
+
+### GET /transactions
+Get all transactions in the system.
+
+**Response**: Array of transaction objects with related user, wallet, organization, and property details.
+
+### GET /transactions/user/:userId
+Get all transactions for a specific user.
+
+**Note**: `userId` can be either a UUID or a display code (e.g., "USR-000001").
+
+**Response**: Array of transaction objects for the specified user.
+
+---
+
+## 8. Rewards
 
 ### POST /rewards/distribute
 Distribute ROI proportionally across all confirmed investments for a property:
@@ -258,7 +321,11 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
    POST /admin/users
    { "fullName": "Sara Ahmed", "email": "sara@example.com" }
    ```
-   → Each auto-creates a wallet with `balanceUSDT: 0`
+   → Each auto-creates:
+   - User with displayCode (USR-000001, USR-000002)
+   - Wallet with `balanceUSDT: 0`
+   - KYC verification with `status: "pending"`
+   - Portfolio with zero investment values
 
 4. **Deposit Funds:**
    ```
@@ -305,6 +372,9 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
 - Sequential `displayCode` fields (USR/ORG/PROP/INV/TXN/RWD) are auto-generated via Postgres sequences.
 - Investment flow uses pessimistic locks to prevent race conditions.
 - Validation is enabled globally (class-validator).
+- **User Creation**: Creating a user automatically creates 4 related records (User, Wallet, KYC, Portfolio) in a single transaction.
+- **KYC Auto-Creation**: New users get a KYC record with `status: "pending"` and `type: "cnic"` by default.
+- **Portfolio Auto-Creation**: New users get a portfolio with zero investment values and `activeInvestments: 0`.
 - **Transactions**: Each investment creates one unified transaction (type: "investment") with full traceability.
 - **Rewards**: ROI distribution creates one reward and one transaction per user (aggregated across all their investments in a property).
 - **Traceability**: All transactions include `fromEntity`, `toEntity`, `propertyId`, and `organizationId` for complete audit trails.

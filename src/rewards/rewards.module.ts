@@ -8,9 +8,13 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
+import { PortfolioModule } from '../portfolio/portfolio.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Reward, Investment, Wallet, Transaction, User, Property])],
+  imports: [
+    TypeOrmModule.forFeature([Reward, Investment, Wallet, Transaction, User, Property]),
+    PortfolioModule, // ADD THIS
+  ],
   controllers: [RewardsController],
   providers: [RewardsService],
 })

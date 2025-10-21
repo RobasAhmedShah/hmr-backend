@@ -10,6 +10,7 @@ import { Property } from '../properties/entities/property.entity';
 import { User } from '../admin/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { DistributeRoiDto } from './dto/distribute-roi.dto';
+import { PortfolioService } from '../portfolio/portfolio.service';
 
 @Injectable()
 export class RewardsService {
@@ -17,6 +18,7 @@ export class RewardsService {
     private readonly dataSource: DataSource,
     @InjectRepository(Reward)
     private readonly rewardRepo: Repository<Reward>,
+    private readonly portfolioService: PortfolioService, // ADD THIS
   ) {}
 
   async distributeRoi(dto: DistributeRoiDto) {
@@ -121,6 +123,13 @@ export class RewardsService {
           displayCode: txnDisplayCode,
         });
         await manager.save(Transaction, txn);
+
+        // Auto-update portfolio for this user (NEW)
+        await this.portfolioService.updateAfterReward(
+          userId,
+          roiShare,
+          manager
+        );
       }
 
       return { rewards, count: rewards.length, totalDistributed: totalRoi.toString() };
