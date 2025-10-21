@@ -4,9 +4,11 @@ import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { User } from './entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
+import { KycVerification } from '../kyc/entities/kyc-verification.entity';
+import { Portfolio } from '../portfolio/entities/portfolio.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Wallet])],
+  imports: [TypeOrmModule.forFeature([User, Wallet, KycVerification, Portfolio])],
   controllers: [AdminController],
   providers: [AdminService],
 })
