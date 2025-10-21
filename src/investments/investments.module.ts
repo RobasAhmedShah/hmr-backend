@@ -7,9 +7,14 @@ import { Property } from '../properties/entities/property.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { PortfolioModule } from '../portfolio/portfolio.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Investment, Property, Wallet, Transaction, User])],
+  imports: [
+    TypeOrmModule.forFeature([Investment, Property, Wallet, Transaction, User, Organization]),
+    PortfolioModule, // ADD THIS
+  ],
   controllers: [InvestmentsController],
   providers: [InvestmentsService],
 })

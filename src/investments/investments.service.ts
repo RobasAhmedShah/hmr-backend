@@ -10,6 +10,7 @@ import { User } from '../admin/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { InvestDto } from './dto/invest.dto';
+import { PortfolioService } from '../portfolio/portfolio.service';
 
 @Injectable()
 export class InvestmentsService {
@@ -17,6 +18,7 @@ export class InvestmentsService {
     private readonly dataSource: DataSource,
     @InjectRepository(Investment)
     private readonly investmentRepo: Repository<Investment>,
+    private readonly portfolioService: PortfolioService, // ADD THIS
   ) {}
 
   async invest(userId: string, propertyId: string, tokensToBuy: Decimal) {
@@ -126,6 +128,13 @@ export class InvestmentsService {
         displayCode: txnDisplayCode,
       });
       await manager.save(Transaction, txn);
+
+      // Step 12: Auto-update portfolio (NEW)
+      await this.portfolioService.updateAfterInvestment(
+        actualUserId,
+        amountUSDT,
+        manager
+      );
 
       return savedInvestment;
     });

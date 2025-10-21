@@ -220,7 +220,44 @@ Get investment by UUID or displayCode (e.g., INV-000001).
 
 ---
 
-## 6. Rewards
+## 6. Portfolio
+
+### GET /portfolio/user/:userId/detailed
+Get comprehensive portfolio for a specific user.
+
+**Note**: userId can be UUID or displayCode (e.g., "USR-000001")
+
+**Auto-Update Triggers**:
+- Portfolio automatically updates when user makes investment
+- Portfolio automatically updates when user receives rewards
+- No manual POST endpoint needed
+
+**Response includes**:
+- User information (id, displayCode, name, email)
+- Portfolio summary (totalInvested, totalRewards, totalROI, activeInvestments)
+- Summary statistics (totalCurrentValue, netROI, averageROI)
+- Investments array with property details, organization, tokens, current value, rewards per investment
+- Rewards history with property context
+
+---
+
+## 7. Transactions
+
+### GET /transactions
+Get all transactions in the system.
+
+**Response**: Array of transaction objects with related user, wallet, organization, and property details.
+
+### GET /transactions/user/:userId
+Get all transactions for a specific user.
+
+**Note**: `userId` can be either a UUID or a display code (e.g., "USR-000001").
+
+**Response**: Array of transaction objects for the specified user.
+
+---
+
+## 8. Rewards
 
 ### POST /rewards/distribute
 Distribute ROI proportionally across all confirmed investments for a property:
