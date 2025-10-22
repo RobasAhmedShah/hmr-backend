@@ -13,6 +13,7 @@ import { TransactionsModule } from './transactions';
 import { InvestmentsModule } from './investments';
 import { RewardsModule } from './rewards';
 import { PortfolioModule } from './portfolio';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ListenersModule } from './listeners/listeners.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { ListenersModule } from './listeners/listeners.module';
     InvestmentsModule,
     RewardsModule,
     PortfolioModule,
+    PaymentMethodsModule, // Payment method system
     ListenersModule, // Event listeners for cross-service updates
   ],
   controllers: [AppController],

@@ -5,6 +5,7 @@ import { User } from '../../admin/entities/user.entity';
 import { Wallet } from '../../wallet/entities/wallet.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 import { Property } from '../../properties/entities/property.entity';
+import { PaymentMethod } from '../../payment-methods/entities/payment-method.entity';
 
 @Entity('transactions')
 export class Transaction {
@@ -46,6 +47,14 @@ export class Transaction {
   @ManyToOne(() => Property, { nullable: true })
   @JoinColumn({ name: 'propertyId' })
   property?: Property;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  paymentMethodId?: string | null;
+
+  @ManyToOne(() => PaymentMethod, { nullable: true })
+  @JoinColumn({ name: 'paymentMethodId' })
+  paymentMethod?: PaymentMethod;
 
   @Column({ type: 'varchar', length: 32 })
   type: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'fee' | 'reward' | 'inflow';

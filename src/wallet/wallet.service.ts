@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { OnEvent } from '@nestjs/event-emitter';
+import { DataSource, Repository, EntityManager } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Decimal from 'decimal.js';
 import { Wallet } from './entities/wallet.entity';
@@ -8,6 +9,7 @@ import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
 import { DepositDto } from './dto/deposit.dto';
 import { WalletCreditedEvent } from '../events/wallet.events';
+import type { WalletDepositInitiatedEvent, WalletFundedEvent } from '../events/payment.events';
 
 @Injectable()
 export class WalletService {
@@ -103,5 +105,87 @@ export class WalletService {
 
   async findAll() {
     return this.walletRepo.find({ relations: ['user'] });
+  }
+
+  /**
+   * Handle wallet deposit initiated event - process the deposit
+   */
+  @OnEvent('wallet.deposit_initiated', { async: true })
+  async handleDepositInitiated(event: WalletDepositInitiatedEvent) {
+    try {
+      this.logger.log(`Processing wallet deposit for user ${event.userDisplayCode}`);
+
+      // Async listener - create new transaction
+      await this.dataSource.transaction(async (manager) => {
+        await this.processDepositInTransaction(event, manager);
+      });
+
+      this.logger.log(`Wallet deposit processed for user ${event.userDisplayCode}`);
+    } catch (error) {
+      this.logger.error(`Failed to process wallet deposit for user ${event.userDisplayCode}:`, error);
+      // Don't throw - let the main operation continue
+    }
+  }
+
+  /**
+   * Process deposit in transaction
+   */
+  private async processDepositInTransaction(
+    event: WalletDepositInitiatedEvent,
+    manager: EntityManager,
+  ) {
+    const wallets = manager.getRepository(Wallet);
+    const transactions = manager.getRepository(Transaction);
+    const users = manager.getRepository(User);
+
+    // Get user and wallet
+    const user = await users.findOne({ where: { id: event.userId } });
+    if (!user) throw new Error('User not found');
+
+    const wallet = await wallets.findOne({ where: { userId: event.userId } });
+    if (!wallet) throw new Error('Wallet not found');
+
+    // Update wallet balance
+    wallet.balanceUSDT = (wallet.balanceUSDT as Decimal).plus(event.amountUSDT);
+    wallet.totalDepositedUSDT = (wallet.totalDepositedUSDT as Decimal).plus(event.amountUSDT);
+    await wallets.save(wallet);
+
+    // Generate displayCode for transaction
+    const txnResult = await transactions.query('SELECT nextval(\'transaction_display_seq\') as nextval');
+    const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
+
+    const txn = transactions.create({
+      userId: event.userId,
+      walletId: wallet.id,
+      paymentMethodId: event.methodId,
+      type: 'deposit',
+      amountUSDT: event.amountUSDT,
+      status: 'completed',
+      description: `Deposit via ${event.provider} ${event.methodType}`,
+      displayCode: txnDisplayCode,
+    });
+    const savedTxn = await transactions.save(txn);
+
+    // Emit wallet funded event
+    const walletFundedEvent: WalletFundedEvent = {
+      eventId: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      userId: event.userId,
+      userDisplayCode: event.userDisplayCode,
+      amountUSDT: event.amountUSDT,
+      transactionId: savedTxn.id,
+      transactionDisplayCode: txnDisplayCode,
+      methodId: event.methodId,
+      methodType: event.methodType,
+      provider: event.provider,
+    };
+
+    try {
+      this.eventEmitter.emit('wallet.funded', walletFundedEvent);
+      this.logger.log(`Wallet funded event emitted for user ${event.userDisplayCode}`);
+    } catch (error) {
+      this.logger.error('Failed to emit wallet funded event:', error);
+      // Don't throw - let the main operation continue
+    }
   }
 }
