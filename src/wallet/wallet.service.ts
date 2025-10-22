@@ -1,18 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Decimal from 'decimal.js';
 import { Wallet } from './entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
 import { DepositDto } from './dto/deposit.dto';
+import { WalletCreditedEvent } from '../events/wallet.events';
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
+    private readonly eventEmitter: EventEmitter2, // Event-driven architecture
   ) {}
 
   async deposit(dto: DepositDto) {
@@ -55,6 +60,28 @@ export class WalletService {
         displayCode: txnDisplayCode,
       });
       await transactions.save(txn);
+
+      // Emit wallet credited event for audit/logging
+      const walletCreditedEvent: WalletCreditedEvent = {
+        eventId: `wal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
+        userId: actualUserId,
+        userDisplayCode: dto.userId, // Original input (could be displayCode)
+        walletId: wallet.id,
+        amountUSDT: amount,
+        newBalanceUSDT: wallet.balanceUSDT as Decimal,
+        transactionId: txn.id,
+        transactionDisplayCode: txnDisplayCode,
+        description: 'User deposit',
+      };
+
+      try {
+        this.eventEmitter.emit('wallet.credited', walletCreditedEvent);
+        this.logger.log(`Wallet credited event emitted for user ${dto.userId}`);
+      } catch (error) {
+        this.logger.error('Failed to emit wallet credited event:', error);
+        // Don't throw - let the main operation continue
+      }
 
       return { wallet, transaction: txn };
     });

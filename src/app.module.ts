@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
@@ -12,10 +13,12 @@ import { TransactionsModule } from './transactions';
 import { InvestmentsModule } from './investments';
 import { RewardsModule } from './rewards';
 import { PortfolioModule } from './portfolio';
+import { ListenersModule } from './listeners/listeners.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    EventEmitterModule.forRoot(), // Event-driven architecture
     AdminModule,
     OrganizationsModule,
     UsersModule,
@@ -26,6 +29,7 @@ import { PortfolioModule } from './portfolio';
     InvestmentsModule,
     RewardsModule,
     PortfolioModule,
+    ListenersModule, // Event listeners for cross-service updates
   ],
   controllers: [AppController],
   providers: [AppService],

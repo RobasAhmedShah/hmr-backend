@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Decimal from 'decimal.js';
 import { Reward } from './entities/reward.entity';
 import { Investment } from '../investments/entities/investment.entity';
@@ -10,15 +11,17 @@ import { Property } from '../properties/entities/property.entity';
 import { User } from '../admin/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { DistributeRoiDto } from './dto/distribute-roi.dto';
-import { PortfolioService } from '../portfolio/portfolio.service';
+import { RewardDistributedEvent } from '../events/reward.events';
 
 @Injectable()
 export class RewardsService {
+  private readonly logger = new Logger(RewardsService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Reward)
     private readonly rewardRepo: Repository<Reward>,
-    private readonly portfolioService: PortfolioService, // ADD THIS
+    private readonly eventEmitter: EventEmitter2, // Event-driven architecture
   ) {}
 
   async distributeRoi(dto: DistributeRoiDto) {
@@ -124,12 +127,31 @@ export class RewardsService {
         });
         await manager.save(Transaction, txn);
 
-        // Auto-update portfolio for this user (NEW)
-        await this.portfolioService.updateAfterReward(
+        // Emit reward distributed event (replaces manual portfolio update)
+        const rewardEvent: RewardDistributedEvent = {
+          eventId: `rwd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date(),
           userId,
-          roiShare,
-          manager
-        );
+          userDisplayCode: userDisplayName,
+          propertyId: property.id,
+          propertyDisplayCode: property.displayCode,
+          organizationId: property.organizationId,
+          organizationDisplayCode: orgDisplayName,
+          amountUSDT: roiShare,
+          rewardId: savedReward.id,
+          rewardDisplayCode: savedReward.displayCode,
+          investmentId: userInvestments[0].id,
+          investmentDisplayCode: userInvestments[0].displayCode,
+        };
+
+        // Emit event for listeners to handle portfolio and transaction updates
+        try {
+          this.eventEmitter.emit('reward.distributed', rewardEvent);
+          this.logger.log(`Reward distributed event emitted for user ${userDisplayName}`);
+        } catch (error) {
+          this.logger.error(`Failed to emit reward distributed event for user ${userDisplayName}:`, error);
+          // Don't throw - let the main operation continue
+        }
       }
 
       return { rewards, count: rewards.length, totalDistributed: totalRoi.toString() };
