@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Decimal from 'decimal.js';
 import { Investment } from './entities/investment.entity';
 import { Property } from '../properties/entities/property.entity';
@@ -10,15 +11,17 @@ import { User } from '../admin/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { InvestDto } from './dto/invest.dto';
-import { PortfolioService } from '../portfolio/portfolio.service';
+import { InvestmentCompletedEvent } from '../events/investment.events';
 
 @Injectable()
 export class InvestmentsService {
+  private readonly logger = new Logger(InvestmentsService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Investment)
     private readonly investmentRepo: Repository<Investment>,
-    private readonly portfolioService: PortfolioService, // ADD THIS
+    private readonly eventEmitter: EventEmitter2, // Event-driven architecture
   ) {}
 
   async invest(userId: string, propertyId: string, tokensToBuy: Decimal) {
@@ -98,43 +101,36 @@ export class InvestmentsService {
       const txnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
       const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
       
-      // Step 9: Credit liquidity to the organization (property holder)
+      // Step 9: Get organization for event emission
       const organization = await manager.findOne(Organization, {
         where: { id: property.organizationId },
-        lock: { mode: 'pessimistic_write' },
       });
       if (!organization) throw new NotFoundException('Organization not found for property');
 
-      organization.liquidityUSDT = (organization.liquidityUSDT as Decimal).plus(amountUSDT);
-      await manager.save(Organization, organization);
-
-      // Get user display name for traceability
-      const userDisplayName = user.fullName || user.email;
-      const orgDisplayName = organization.name;
-
-      // Step 10: Record unified transaction with entity traceability
-      const txn = manager.create(Transaction, {
+      // Step 10: Emit investment completed event AFTER transaction commits
+      const investmentEvent: InvestmentCompletedEvent = {
+        eventId: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
         userId: actualUserId,
-        walletId: wallet.id,
-        organizationId: organization.id,
+        userDisplayCode: user.displayCode,
         propertyId: property.id,
-        type: 'investment',
+        propertyDisplayCode: property.displayCode,
+        organizationId: organization.id,
+        organizationDisplayCode: organization.displayCode,
+        tokensPurchased: tokensToBuy,
         amountUSDT,
-        status: 'completed',
-        referenceId: savedInvestment.id,
-        description: `Investment in ${property.title}`,
-        fromEntity: userDisplayName,  // Human-readable sender
-        toEntity: orgDisplayName,      // Human-readable receiver
-        displayCode: txnDisplayCode,
-      });
-      await manager.save(Transaction, txn);
+        investmentId: savedInvestment.id,
+        investmentDisplayCode: savedInvestment.displayCode,
+      };
 
-      // Step 12: Auto-update portfolio (NEW)
-      await this.portfolioService.updateAfterInvestment(
-        actualUserId,
-        amountUSDT,
-        manager
-      );
+      // Emit event for listeners to handle portfolio, organization, and transaction updates
+      try {
+        this.eventEmitter.emit('investment.completed', investmentEvent);
+        this.logger.log(`Investment completed event emitted for user ${user.displayCode}`);
+      } catch (error) {
+        this.logger.error('Failed to emit investment completed event:', error);
+        // Don't throw - let the main operation continue
+      }
 
       return savedInvestment;
     });

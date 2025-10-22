@@ -1,20 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Decimal from 'decimal.js';
 import { User } from './entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { KycVerification } from '../kyc/entities/kyc-verification.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
+import { UserCreatedEvent } from '../events/user.events';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
+    private readonly eventEmitter: EventEmitter2, // Event-driven architecture
   ) {}
 
   findAll() {
@@ -77,6 +82,29 @@ export class AdminService {
         lastUpdated: new Date(),
       });
       await portfolioRepo.save(portfolio);
+      
+      // Emit user created event for audit/logging
+      const userCreatedEvent: UserCreatedEvent = {
+        eventId: `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
+        userId: saved.id,
+        userDisplayCode: saved.displayCode,
+        fullName: saved.fullName,
+        email: saved.email,
+        phone: saved.phone || undefined,
+        role: saved.role,
+        walletId: wallet.id,
+        kycId: kyc.id,
+        portfolioId: portfolio.id,
+      };
+
+      try {
+        this.eventEmitter.emit('user.created', userCreatedEvent);
+        this.logger.log(`User created event emitted for ${saved.displayCode}`);
+      } catch (error) {
+        this.logger.error('Failed to emit user created event:', error);
+        // Don't throw - let the main operation continue
+      }
       
       return saved;
     });
