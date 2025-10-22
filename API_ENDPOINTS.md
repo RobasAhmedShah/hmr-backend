@@ -257,7 +257,166 @@ Get all transactions for a specific user.
 
 ---
 
-## 8. Rewards
+## 8. Payment Methods
+
+### POST /payment-methods
+Create a new payment method for a user (requires verified KYC).
+
+**Body for Card Payment Method:**
+```json
+{
+  "userId": "USR-000031",
+  "type": "card",
+  "provider": "Visa",
+  "isDefault": true,
+  "cardDetails": {
+    "cardNumber": "4111111111111111",
+    "cardholderName": "John Doe",
+    "expiryMonth": "12",
+    "expiryYear": "2025",
+    "cvv": "123",
+    "cardType": "Visa",
+    "cardCategory": "Credit",
+    "billingAddress": "123 Main Street",
+    "billingCity": "New York",
+    "billingState": "NY",
+    "billingPostalCode": "10001",
+    "billingCountry": "United States",
+    "issuingBank": "Chase Bank",
+    "bankCode": "CHASE",
+    "token": "tok_123456789",
+    "isTokenized": true
+  }
+}
+```
+
+**Body for Bank Payment Method:**
+```json
+{
+  "userId": "USR-000031",
+  "type": "bank",
+  "provider": "Bank of America",
+  "isDefault": false
+}
+```
+
+**Note:** `userId` can be either a UUID or displayCode (e.g., "USR-000031"). Card details are required only for `type: "card"`.
+
+### GET /payment-methods?userId={userId}
+Get all payment methods for a specific user.
+
+**Query Parameters:**
+- `userId` (required): User UUID or displayCode (e.g., "USR-000031")
+
+**Response:**
+```json
+[
+  {
+    "id": "payment-method-uuid-1",
+    "type": "card",
+    "provider": "Visa",
+    "status": "verified",
+    "isDefault": true,
+    "userId": "user-uuid",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "cardDetails": {
+      "id": "card-details-uuid",
+      "cardNumber": "4111111111111111",
+      "cardholderName": "John Doe",
+      "expiryMonth": "12",
+      "expiryYear": "2025",
+      "cvv": "123",
+      "cardType": "Visa",
+      "cardCategory": "Credit",
+      "billingAddress": "123 Main Street",
+      "billingCity": "New York",
+      "billingState": "NY",
+      "billingPostalCode": "10001",
+      "billingCountry": "United States",
+      "issuingBank": "Chase Bank",
+      "bankCode": "CHASE",
+      "token": "tok_123456789",
+      "isTokenized": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "payment-method-uuid-2",
+    "type": "bank",
+    "provider": "Bank of America",
+    "status": "verified",
+    "isDefault": false,
+    "userId": "user-uuid",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "cardDetails": null
+  }
+]
+```
+
+### GET /payment-methods/:id
+Get a specific payment method by ID.
+
+### PATCH /payment-methods/:id/verify
+Verify a payment method (change status to verified or disabled).
+
+**Body:**
+```json
+{
+  "status": "verified"
+}
+```
+
+### PATCH /payment-methods/:id/default
+Set or unset a payment method as default for the user.
+
+**Body:**
+```json
+{
+  "isDefault": true
+}
+```
+
+**Note:** Setting one payment method as default will automatically unset other default payment methods for the same user.
+
+### DELETE /payment-methods/:id
+Soft delete a payment method (sets status to "disabled").
+
+### POST /payment-methods/deposit
+Initiate a deposit using a payment method. If no `methodId` is provided, uses the user's default payment method.
+
+**Body with specific payment method:**
+```json
+{
+  "userId": "USR-000031",
+  "amountUSDT": 1000,
+  "methodId": "payment-method-uuid"
+}
+```
+
+**Body using default payment method:**
+```json
+{
+  "userId": "USR-000031",
+  "amountUSDT": 1000
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Deposit initiated successfully",
+  "amount": "1000"
+}
+```
+
+**Note:** This endpoint emits a `wallet.deposit_initiated` event that triggers the actual wallet deposit process.
+
+---
+
+## 9. Rewards
 
 ### POST /rewards/distribute
 Distribute ROI proportionally across all confirmed investments for a property:
@@ -327,16 +486,53 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
    - KYC verification with `status: "pending"`
    - Portfolio with zero investment values
 
-4. **Deposit Funds:**
+4. **Add Payment Methods:**
    ```
-   POST /wallet/deposit
+   POST /payment-methods
+   {
+     "userId": "<ali_user_id>",
+     "type": "card",
+     "provider": "Visa",
+     "isDefault": true,
+     "cardDetails": {
+       "cardNumber": "4111111111111111",
+       "cardholderName": "Ali Khan",
+       "expiryMonth": "12",
+       "expiryYear": "2025",
+       "cvv": "123",
+       "cardType": "Visa",
+       "cardCategory": "Credit",
+       "billingAddress": "123 Main Street",
+       "billingCity": "Karachi",
+       "billingState": "Sindh",
+       "billingPostalCode": "75500",
+       "billingCountry": "Pakistan"
+     }
+   }
+   ```
+   → Creates payment method with card details
+
+5. **Verify Payment Methods:**
+   ```
+   PATCH /payment-methods/<payment_method_id>/verify
+   { "status": "verified" }
+   ```
+   → Enables payment method for deposits
+
+6. **Deposit Funds via Payment Method:**
+   ```
+   POST /payment-methods/deposit
    { "userId": "<ali_user_id>", "amountUSDT": 5000 }
+   ```
+   → Uses default payment method to deposit funds
    
+   ```
    POST /wallet/deposit
    { "userId": "<sara_user_id>", "amountUSDT": 2000 }
    ```
+   → Direct wallet deposit (legacy method)
 
-5. **Create Investments:**
+7. **Create Investments:**
    ```
    POST /investments
    { "userId": "<ali_user_id>", "propertyId": "<property_id>", "amountUSDT": 2500 }
@@ -347,7 +543,7 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
    → Buys 1.25 tokens; property.availableTokens becomes 996.25
    ```
 
-6. **Distribute ROI (10% = 100,000 USDT):**
+8. **Distribute ROI (10% = 100,000 USDT):**
    ```
    POST /rewards/distribute
    { "propertyId": "<property_id>", "totalRoiUSDT": 100000 }
@@ -355,7 +551,7 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
    → Ali gets 250 USDT (2.5/1000 * 100000)
    → Sara gets 125 USDT (1.25/1000 * 100000)
 
-7. **Verify Balances:**
+9. **Verify Balances:**
    ```
    GET /wallet/user/<ali_user_id>
    → balanceUSDT: 2750 (5000 - 2500 + 250)
@@ -375,6 +571,9 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
 - **User Creation**: Creating a user automatically creates 4 related records (User, Wallet, KYC, Portfolio) in a single transaction.
 - **KYC Auto-Creation**: New users get a KYC record with `status: "pending"` and `type: "cnic"` by default.
 - **Portfolio Auto-Creation**: New users get a portfolio with zero investment values and `activeInvestments: 0`.
+- **Payment Methods**: Users can add payment methods (card, bank, crypto) after KYC verification. Card details are stored in a separate entity with full validation.
+- **Default Payment Methods**: Users can set one payment method as default for seamless deposits without specifying methodId.
+- **Event-Driven Deposits**: Payment method deposits emit `wallet.deposit_initiated` events that trigger the actual wallet funding process.
 - **Transactions**: Each investment creates one unified transaction (type: "investment") with full traceability.
 - **Rewards**: ROI distribution creates one reward and one transaction per user (aggregated across all their investments in a property).
 - **Traceability**: All transactions include `fromEntity`, `toEntity`, `propertyId`, and `organizationId` for complete audit trails.
