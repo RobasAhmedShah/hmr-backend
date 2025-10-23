@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Decimal from 'decimal.js';
 import { Property } from './entities/property.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { UpdatePropertyDto } from './dto/update-property.dto';
+import { UpdatePropertyStatusDto } from './dto/update-property-status.dto';
 import { Organization } from '../organizations/entities/organization.entity';
 
 @Injectable()
@@ -86,6 +88,74 @@ export class PropertiesService {
       ],
       relations: ['organization']
     });
+  }
+
+  async update(id: string, dto: UpdatePropertyDto) {
+    const property = await this.findByIdOrDisplayCode(id);
+    if (!property) {
+      throw new NotFoundException(`Property with id or displayCode '${id}' not found`);
+    }
+
+    // Handle dynamic field updates
+    const updateData: Partial<Property> = {};
+
+    // Update only provided fields
+    if (dto.title !== undefined) updateData.title = dto.title;
+    if (dto.slug !== undefined) updateData.slug = dto.slug;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.type !== undefined) updateData.type = dto.type;
+    if (dto.status !== undefined) updateData.status = dto.status as any;
+    if (dto.city !== undefined) updateData.city = dto.city;
+    if (dto.country !== undefined) updateData.country = dto.country;
+    if (dto.features !== undefined) updateData.features = dto.features;
+    if (dto.images !== undefined) updateData.images = dto.images;
+
+    // Handle decimal fields
+    if (dto.totalValueUSDT !== undefined) {
+      updateData.totalValueUSDT = new Decimal(dto.totalValueUSDT);
+    }
+    if (dto.totalTokens !== undefined) {
+      updateData.totalTokens = new Decimal(dto.totalTokens);
+    }
+    if (dto.availableTokens !== undefined) {
+      updateData.availableTokens = new Decimal(dto.availableTokens);
+    }
+    if (dto.pricePerTokenUSDT !== undefined) {
+      updateData.pricePerTokenUSDT = new Decimal(dto.pricePerTokenUSDT);
+    }
+    if (dto.expectedROI !== undefined) {
+      updateData.expectedROI = new Decimal(dto.expectedROI);
+    }
+
+    // Auto-recalculate pricePerTokenUSDT if totalValueUSDT or totalTokens changed
+    if (dto.totalValueUSDT !== undefined || dto.totalTokens !== undefined) {
+      const totalValue = dto.totalValueUSDT !== undefined ? new Decimal(dto.totalValueUSDT) : property.totalValueUSDT;
+      const totalTokens = dto.totalTokens !== undefined ? new Decimal(dto.totalTokens) : property.totalTokens;
+      updateData.pricePerTokenUSDT = totalValue.div(totalTokens);
+    }
+
+    await this.propertyRepo.update(property.id, updateData);
+    return this.findByIdOrDisplayCode(id);
+  }
+
+  async updateStatus(id: string, dto: UpdatePropertyStatusDto) {
+    const property = await this.findByIdOrDisplayCode(id);
+    if (!property) {
+      throw new NotFoundException(`Property with id or displayCode '${id}' not found`);
+    }
+
+    await this.propertyRepo.update(property.id, { status: dto.status as any });
+    return this.findByIdOrDisplayCode(id);
+  }
+
+  async remove(id: string) {
+    const property = await this.findByIdOrDisplayCode(id);
+    if (!property) {
+      throw new NotFoundException(`Property with id or displayCode '${id}' not found`);
+    }
+
+    await this.propertyRepo.remove(property);
+    return { message: `Property '${property.displayCode}' has been deleted successfully` };
   }
 }
 

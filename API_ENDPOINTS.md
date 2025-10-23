@@ -149,6 +149,59 @@ Get property by displayCode.
 ### GET /properties/:id
 Get property by UUID or displayCode (e.g., PROP-000001).
 
+### PATCH /properties/:id
+Update property fields dynamically. You can update any field by passing the field name and its new value.
+
+**Body (all fields optional):**
+```json
+{
+  "title": "Updated Property Title",
+  "slug": "updated-property-slug",
+  "description": "Updated description",
+  "type": "commercial",
+  "status": "active",
+  "totalValueUSDT": 1500000,
+  "totalTokens": 1500,
+  "availableTokens": 1200,
+  "pricePerTokenUSDT": 1000,
+  "expectedROI": 12.5,
+  "city": "Lahore",
+  "country": "Pakistan",
+  "features": {"amenities": ["pool", "gym", "parking"]},
+  "images": ["https://example.com/updated-img1.jpg"]
+}
+```
+
+**Note:** 
+- `id` can be either a UUID or displayCode (e.g., "PROP-000001")
+- Only provided fields will be updated
+- If `totalValueUSDT` or `totalTokens` are updated, `pricePerTokenUSDT` will be automatically recalculated
+- `status` can be any string value (not restricted to predefined values)
+
+### PATCH /properties/:id/status
+Update property status only. Status can be any string value.
+
+**Body:**
+```json
+{
+  "status": "active"
+}
+```
+
+**Note:** `id` can be either a UUID or displayCode (e.g., "PROP-000001"). Status can be any string value like "active", "soldout", "maintenance", "under_construction", etc.
+
+### DELETE /properties/:id
+Delete a property permanently.
+
+**Note:** `id` can be either a UUID or displayCode (e.g., "PROP-000001").
+
+**Response:**
+```json
+{
+  "message": "Property 'PROP-000001' has been deleted successfully"
+}
+```
+
 ---
 
 ## 4. Wallet

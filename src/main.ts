@@ -16,7 +16,10 @@ async function createNestApp(): Promise<NestFastifyApplication> {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(fastifyInstance)
+    new FastifyAdapter(fastifyInstance),
+    {
+      snapshot: true,
+    }
   );
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
