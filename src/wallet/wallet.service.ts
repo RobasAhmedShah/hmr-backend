@@ -7,6 +7,7 @@ import Decimal from 'decimal.js';
 import { Wallet } from './entities/wallet.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
+import { KycVerification } from '../kyc/entities/kyc-verification.entity';
 import { DepositDto } from './dto/deposit.dto';
 import { WalletCreditedEvent } from '../events/wallet.events';
 import type { WalletDepositInitiatedEvent, WalletFundedEvent } from '../events/payment.events';
@@ -36,6 +37,12 @@ export class WalletService {
         const user = await manager.findOne(User, { where: { displayCode: dto.userId } });
         if (!user) throw new Error('User not found');
         actualUserId = user.id;
+      }
+
+      // Check if user has verified KYC before allowing deposits
+      const kyc = await manager.findOne(KycVerification, { where: { userId: actualUserId } });
+      if (!kyc || kyc.status !== 'verified') {
+        throw new Error('User must have verified KYC to make deposits');
       }
 
       const wallet = await wallets.findOne({ where: { userId: actualUserId } });
@@ -141,6 +148,8 @@ export class WalletService {
     // Get user and wallet
     const user = await users.findOne({ where: { id: event.userId } });
     if (!user) throw new Error('User not found');
+
+    // KYC verification is now checked in the main service before emitting the event
 
     const wallet = await wallets.findOne({ where: { userId: event.userId } });
     if (!wallet) throw new Error('Wallet not found');

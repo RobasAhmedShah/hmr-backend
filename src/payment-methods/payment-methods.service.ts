@@ -241,6 +241,12 @@ export class PaymentMethodsService {
       const user = await manager.findOne(User, { where: { id: actualUserId } });
       if (!user) throw new NotFoundException('User not found');
 
+      // Check if user has verified KYC before allowing deposits
+      const kyc = await manager.findOne(KycVerification, { where: { userId: actualUserId } });
+      if (!kyc || kyc.status !== 'verified') {
+        throw new BadRequestException('User must have verified KYC to make deposits');
+      }
+
       let paymentMethod: PaymentMethod | null;
 
       // If methodId is provided, use it; otherwise, find the user's default payment method
