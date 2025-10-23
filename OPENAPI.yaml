@@ -27,6 +27,8 @@ tags:
     description: Manage user KYC (Know Your Customer) verifications.
   - name: Rewards
     description: Manage and distribute ROI rewards.
+  - name: Admin Dashboard & Analytics
+    description: Comprehensive dashboard statistics and growth analytics with dynamic filtering.
 
 paths:
   # ----------------------------------------------
@@ -902,6 +904,99 @@ paths:
         '404':
           description: Reward not found.
 
+  # ----------------------------------------------
+  # Admin Dashboard & Analytics
+  # ----------------------------------------------
+  /admin/dashboard:
+    get:
+      tags:
+        - Admin Dashboard & Analytics
+      summary: Get comprehensive dashboard statistics
+      description: Get comprehensive dashboard statistics with optional filtering by user, organization, or property.
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by specific user (UUID or displayCode like USR-000001)
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by specific organization (UUID or displayCode like ORG-000001)
+        - name: propertyId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by specific property (UUID or displayCode like PROP-000001)
+      responses:
+        '200':
+          description: Dashboard statistics with comprehensive metrics.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PlatformDashboard'
+                  - $ref: '#/components/schemas/UserDashboard'
+                  - $ref: '#/components/schemas/OrganizationDashboard'
+                  - $ref: '#/components/schemas/PropertyDashboard'
+  /admin/analytics:
+    get:
+      tags:
+        - Admin Dashboard & Analytics
+      summary: Get growth metrics and time-series analytics
+      description: Get growth metrics and time-series analytics with optional filtering and time periods.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d', '1y']
+          description: Fixed time period for analytics
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Custom date range start (ISO 8601)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Custom date range end (ISO 8601)
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by user (UUID or displayCode)
+        - name: organizationId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by organization (UUID or displayCode)
+        - name: propertyId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by property (UUID or displayCode)
+      responses:
+        '200':
+          description: Growth metrics and time-series analytics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+
 # ----------------------------------------------
 # Reusable Components
 # ----------------------------------------------
@@ -1745,3 +1840,601 @@ components:
         lastUpdated:
           type: string
           format: date-time
+
+    # ----------------------------------------------
+    # DASHBOARD & ANALYTICS SCHEMAS
+    # ----------------------------------------------
+    PlatformDashboard:
+      type: object
+      description: Platform-wide dashboard statistics
+      properties:
+        overview:
+          type: object
+          properties:
+            totalUsers:
+              type: integer
+              example: 150
+            activeUsers:
+              type: integer
+              example: 142
+            totalOrganizations:
+              type: integer
+              example: 5
+            totalProperties:
+              type: integer
+              example: 25
+            totalInvestments:
+              type: integer
+              example: 89
+            totalInvestmentValue:
+              type: string
+              format: decimal
+              example: "1250000.00"
+            totalTransactions:
+              type: integer
+              example: 234
+            totalTransactionVolume:
+              type: string
+              format: decimal
+              example: "1500000.00"
+            platformRevenue:
+              type: string
+              format: decimal
+              example: "250000.00"
+            totalRewardsDistributed:
+              type: string
+              format: decimal
+              example: "45000.00"
+        users:
+          type: object
+          properties:
+            total:
+              type: integer
+            active:
+              type: integer
+            inactive:
+              type: integer
+            newThisMonth:
+              type: integer
+        kyc:
+          type: object
+          properties:
+            pending:
+              type: integer
+            verified:
+              type: integer
+            rejected:
+              type: integer
+        properties:
+          type: object
+          properties:
+            active:
+              type: integer
+            soldout:
+              type: integer
+            construction:
+              type: integer
+            total:
+              type: integer
+        investments:
+          type: object
+          properties:
+            count:
+              type: integer
+            totalValue:
+              type: string
+              format: decimal
+            averageInvestment:
+              type: string
+              format: decimal
+        transactions:
+          type: object
+          properties:
+            count:
+              type: integer
+            totalVolume:
+              type: string
+              format: decimal
+            byType:
+              type: object
+              properties:
+                deposit:
+                  type: integer
+                investment:
+                  type: integer
+                reward:
+                  type: integer
+                withdrawal:
+                  type: integer
+                inflow:
+                  type: integer
+        recentActivity:
+          type: object
+          properties:
+            recentInvestments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Investment'
+            recentTransactions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+            recentUsers:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            pendingKycReviews:
+              type: array
+              items:
+                $ref: '#/components/schemas/KycVerification'
+
+    UserDashboard:
+      type: object
+      description: User-specific dashboard statistics
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        wallet:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            balanceUSDT:
+              type: string
+              format: decimal
+            lockedUSDT:
+              type: string
+              format: decimal
+            totalDepositedUSDT:
+              type: string
+              format: decimal
+            totalWithdrawnUSDT:
+              type: string
+              format: decimal
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+        kyc:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            type:
+              type: string
+            status:
+              type: string
+            submittedAt:
+              type: string
+              format: date-time
+            reviewedAt:
+              type: string
+              format: date-time
+              nullable: true
+            rejectionReason:
+              type: string
+              nullable: true
+        investments:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Investment'
+            totalValue:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        rewards:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reward'
+            totalAmount:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        transactions:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+            totalVolume:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        paymentMethods:
+          type: object
+          properties:
+            methods:
+              type: array
+              items:
+                $ref: '#/components/schemas/PaymentMethod'
+            verifiedCount:
+              type: integer
+            totalCount:
+              type: integer
+        portfolio:
+          type: object
+          properties:
+            totalInvested:
+              type: string
+              format: decimal
+            activeInvestments:
+              type: integer
+            totalEarned:
+              type: string
+              format: decimal
+            totalROI:
+              type: string
+              format: decimal
+            lastUpdated:
+              type: string
+              format: date-time
+
+    OrganizationDashboard:
+      type: object
+      description: Organization-specific dashboard statistics
+      properties:
+        organization:
+          $ref: '#/components/schemas/Organization'
+        properties:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Property'
+            total:
+              type: integer
+            active:
+              type: integer
+            soldout:
+              type: integer
+        investments:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Investment'
+            totalValue:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        transactions:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+            totalVolume:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        liquidity:
+          type: object
+          properties:
+            currentLiquidity:
+              type: string
+              format: decimal
+            lastUpdated:
+              type: string
+              format: date-time
+        investors:
+          type: object
+          properties:
+            uniqueInvestors:
+              type: integer
+            totalInvestments:
+              type: integer
+
+    PropertyDashboard:
+      type: object
+      description: Property-specific dashboard statistics
+      properties:
+        property:
+          allOf:
+            - $ref: '#/components/schemas/Property'
+            - type: object
+              properties:
+                organization:
+                  $ref: '#/components/schemas/Organization'
+        investments:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Investment'
+            totalValue:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        transactions:
+          type: object
+          properties:
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+            totalVolume:
+              type: string
+              format: decimal
+            count:
+              type: integer
+        investors:
+          type: object
+          properties:
+            uniqueInvestors:
+              type: integer
+            totalInvestments:
+              type: integer
+        tokens:
+          type: object
+          properties:
+            totalTokens:
+              type: string
+            availableTokens:
+              type: string
+            soldTokens:
+              type: string
+            pricePerToken:
+              type: string
+              format: decimal
+            totalValue:
+              type: string
+              format: decimal
+            soldValue:
+              type: string
+              format: decimal
+
+    AnalyticsResponse:
+      type: object
+      description: Growth metrics and time-series analytics
+      properties:
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+        timeSeries:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  count:
+                    type: integer
+            investments:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  count:
+                    type: integer
+                  volume:
+                    type: string
+                    format: decimal
+            rewards:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  count:
+                    type: integer
+                  amount:
+                    type: string
+                    format: decimal
+            transactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  count:
+                    type: integer
+                  volume:
+                    type: string
+                    format: decimal
+            kycVerifications:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  count:
+                    type: integer
+        aggregated:
+          type: object
+          properties:
+            users:
+              type: object
+              properties:
+                total:
+                  type: integer
+                average:
+                  type: number
+                  format: double
+                peak:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date-time
+                    count:
+                      type: integer
+            investments:
+              type: object
+              properties:
+                total:
+                  type: integer
+                totalValue:
+                  type: string
+                  format: decimal
+                average:
+                  type: number
+                  format: double
+                peak:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date-time
+                    count:
+                      type: integer
+                    volume:
+                      type: string
+                      format: decimal
+            rewards:
+              type: object
+              properties:
+                total:
+                  type: integer
+                totalAmount:
+                  type: string
+                  format: decimal
+                average:
+                  type: number
+                  format: double
+                peak:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date-time
+                    count:
+                      type: integer
+                    amount:
+                      type: string
+                      format: decimal
+            transactions:
+              type: object
+              properties:
+                total:
+                  type: integer
+                totalVolume:
+                  type: string
+                  format: decimal
+                average:
+                  type: number
+                  format: double
+                peak:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date-time
+                    count:
+                      type: integer
+                    volume:
+                      type: string
+                      format: decimal
+        comparison:
+          type: object
+          properties:
+            previousPeriod:
+              type: object
+              properties:
+                users:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    average:
+                      type: number
+                      format: double
+                    peak:
+                      type: object
+                      nullable: true
+                investments:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    totalValue:
+                      type: string
+                      format: decimal
+                    average:
+                      type: number
+                      format: double
+                    peak:
+                      type: object
+                      nullable: true
+                rewards:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    totalAmount:
+                      type: string
+                      format: decimal
+                    average:
+                      type: number
+                      format: double
+                    peak:
+                      type: object
+                      nullable: true
+                transactions:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    totalVolume:
+                      type: string
+                      format: decimal
+                    average:
+                      type: number
+                      format: double
+                    peak:
+                      type: object
+                      nullable: true
+            changePercentage:
+              type: object
+              properties:
+                users:
+                  type: number
+                  format: double
+                investments:
+                  type: number
+                  format: double
+                rewards:
+                  type: number
+                  format: double
+                transactions:
+                  type: number
+                  format: double
