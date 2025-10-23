@@ -156,6 +156,8 @@ Get property by UUID or displayCode (e.g., PROP-000001).
 ### POST /wallet/deposit
 Deposit USDT into wallet (credits `balanceUSDT`; inserts deposit transaction).
 
+**Requirements:** User must have verified KYC to make deposits.
+
 **Body:**
 ```json
 {
@@ -387,6 +389,8 @@ Soft delete a payment method (sets status to "disabled").
 ### POST /payment-methods/deposit
 Initiate a deposit using a payment method. If no `methodId` is provided, uses the user's default payment method.
 
+**Requirements:** User must have verified KYC to make deposits.
+
 **Body with specific payment method:**
 ```json
 {
@@ -412,11 +416,118 @@ Initiate a deposit using a payment method. If no `methodId` is provided, uses th
 }
 ```
 
-**Note:** This endpoint emits a `wallet.deposit_initiated` event that triggers the actual wallet deposit process.
+**Note:** This endpoint checks KYC verification before processing and emits a `wallet.deposit_initiated` event that triggers the actual wallet deposit process.
 
 ---
 
-## 9. Rewards
+## 9. KYC (Know Your Customer)
+
+### POST /kyc
+Create or update KYC verification for a user.
+
+**Body:**
+```json
+{
+  "userId": "USR-000031",
+  "type": "cnic",
+  "documentFrontUrl": "https://example.com/front.jpg",
+  "documentBackUrl": "https://example.com/back.jpg",
+  "selfieUrl": "https://example.com/selfie.jpg",
+  "metadata": {
+    "additionalInfo": "Any additional verification data"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "id": "ebde11ec-5d5c-457d-ba87-b83f431962c1",
+  "userId": "9e354ce4-c7ab-4d5b-ba6c-50783d4c01e1",
+  "type": "cnic",
+  "status": "pending",
+  "documentFrontUrl": "https://example.com/front.jpg",
+  "documentBackUrl": "https://example.com/back.jpg",
+  "selfieUrl": "https://example.com/selfie.jpg",
+  "reviewer": null,
+  "rejectionReason": null,
+  "metadata": {
+    "additionalInfo": "Any additional verification data"
+  },
+  "submittedAt": "2025-10-22T11:50:05.198Z",
+  "reviewedAt": null,
+  "createdAt": "2025-10-22T08:38:25.822Z",
+  "updatedAt": "2025-10-22T11:50:04.419Z"
+}
+```
+
+**Note:** `userId` can be either a UUID or displayCode (e.g., "USR-000031"). If KYC already exists for the user, it will be updated with new information and status reset to "pending".
+
+### GET /kyc
+List all KYC verifications.
+
+### GET /kyc/user/:userId
+Get KYC verification for a specific user.
+
+**Note:** `userId` can be either a UUID or displayCode (e.g., "USR-000031").
+
+**Response:**
+```json
+{
+  "id": "ebde11ec-5d5c-457d-ba87-b83f431962c1",
+  "userId": "9e354ce4-c7ab-4d5b-ba6c-50783d4c01e1",
+  "user": {
+    "id": "9e354ce4-c7ab-4d5b-ba6c-50783d4c01e1",
+    "displayCode": "USR-000031",
+    "fullName": "Syed Wasay",
+    "email": "wasay@gmail.com",
+    "phone": "+9231000334455",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-10-22T08:38:25.822Z",
+    "updatedAt": "2025-10-22T08:38:25.822Z"
+  },
+  "type": "cnic",
+  "status": "pending",
+  "documentFrontUrl": "https://example.com/front.jpg",
+  "documentBackUrl": "https://example.com/back.jpg",
+  "selfieUrl": "https://example.com/selfie.jpg",
+  "reviewer": null,
+  "rejectionReason": null,
+  "metadata": {
+    "additionalInfo": "Any additional verification data"
+  },
+  "submittedAt": "2025-10-22T11:50:05.198Z",
+  "reviewedAt": null,
+  "createdAt": "2025-10-22T08:38:25.822Z",
+  "updatedAt": "2025-10-22T11:50:04.419Z"
+}
+```
+
+### GET /kyc/:id
+Get KYC verification by ID or user displayCode.
+
+**Note:** `id` can be either a KYC verification UUID or a user displayCode (e.g., "USR-000031"). If a user displayCode is provided, it returns the most recent KYC verification for that user.
+
+### PATCH /kyc/:id
+Update KYC verification status (admin only).
+
+**Note:** `id` can be either a KYC verification UUID or a user displayCode (e.g., "USR-000031"). If a user displayCode is provided, it updates the most recent KYC verification for that user.
+
+**Body:**
+```json
+{
+  "status": "verified",
+  "reviewer": "admin@example.com",
+  "rejectionReason": null
+}
+```
+
+**Note:** When status is changed to "verified", it emits a `kyc.verified` event that triggers payment method status updates.
+
+---
+
+## 10. Rewards
 
 ### POST /rewards/distribute
 Distribute ROI proportionally across all confirmed investments for a property:

@@ -1,0 +1,1602 @@
+openapi: 3.0.3
+info:
+  title: HMR Backend API
+  description: API for managing real estate tokenization, organizations, users, investments, and wallet transactions.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Organizations
+    description: Manage organizations (real estate developers).
+  - name: Users (Admin)
+    description: Admin-only endpoints for user management.
+  - name: Properties
+    description: Manage tokenized real estate properties.
+  - name: Wallet
+    description: Manage user wallets and balances.
+  - name: Investments
+    description: Manage user investments in properties.
+  - name: Portfolio
+    description: View detailed user investment portfolios.
+  - name: Transactions
+    description: View system-wide and user-specific transactions.
+  - name: Payment Methods
+    description: Manage user payment methods (cards, banks).
+  - name: KYC
+    description: Manage user KYC (Know Your Customer) verifications.
+  - name: Rewards
+    description: Manage and distribute ROI rewards.
+
+paths:
+  # ----------------------------------------------
+  # Organizations
+  # ----------------------------------------------
+  /organizations:
+    get:
+      tags:
+        - Organizations
+      summary: List all organizations
+      responses:
+        '200':
+          description: A list of all organizations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+    post:
+      tags:
+        - Organizations
+      summary: Create a new organization
+      description: Creates a new organization with an auto-generated displayCode and initial liquidity of 0.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreate'
+      responses:
+        '201':
+          description: The organization was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+  /organizations/{id}:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization by ID
+      description: Get organization by its UUID or displayCode (e.g., ORG-000001).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the organization.
+      responses:
+        '200':
+          description: Organization details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '404':
+          description: Organization not found.
+  /organizations/{id}/liquidity:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization liquidity analytics
+      description: Get liquidity analytics for a specific organization by its UUID or displayCode.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the organization.
+      responses:
+        '200':
+          description: Organization liquidity details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationLiquidity'
+  /organizations/{id}/transactions:
+    get:
+      tags:
+        - Organizations
+      summary: Get all transactions for an organization
+      description: Get all transactions for an organization by its UUID or displayCode.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the organization.
+      responses:
+        '200':
+          description: A list of transactions for the organization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+
+  # ----------------------------------------------
+  # Users (Admin)
+  # ----------------------------------------------
+  /admin/users:
+    get:
+      tags:
+        - Users (Admin)
+      summary: List all users
+      responses:
+        '200':
+          description: A list of all users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      tags:
+        - Users (Admin)
+      summary: Create a user
+      description: Creates a user and auto-generates their Wallet, KYC (pending), and Portfolio records in a single transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: The user was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ----------------------------------------------
+  # Properties
+  # ----------------------------------------------
+  /properties:
+    get:
+      tags:
+        - Properties
+      summary: List all properties
+      description: Lists all properties, or filters by slug or displayCode.
+      parameters:
+        - name: slug
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter properties by slug.
+        - name: displayCode
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter properties by displayCode (e.g., PROP-000001).
+      responses:
+        '200':
+          description: A list of properties.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Property'
+    post:
+      tags:
+        - Properties
+      summary: Create a property
+      description: Creates a new property. Auto-computes pricePerTokenUSDT and sets availableTokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyCreate'
+      responses:
+        '201':
+          description: The property was successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+  /properties/{id}:
+    get:
+      tags:
+        - Properties
+      summary: Get property by ID
+      description: Get property by its UUID or displayCode (e.g., PROP-000001).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the property.
+      responses:
+        '200':
+          description: Property details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Property not found.
+
+  # ----------------------------------------------
+  # Wallet
+  # ----------------------------------------------
+  /wallet:
+    get:
+      tags:
+        - Wallet
+      summary: List all wallets
+      responses:
+        '200':
+          description: A list of all user wallets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wallet'
+  /wallet/deposit:
+    post:
+      tags:
+        - Wallet
+      summary: Deposit USDT into wallet (Legacy)
+      description: Directly credits a user's wallet. Requires verified KYC. Prefer using the /payment-methods/deposit endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: The UUID or displayCode of the user.
+                  example: USR-000001
+                amountUSDT:
+                  type: number
+                  format: double
+                  description: The amount of USDT to deposit.
+                  example: 5000
+              required:
+                - userId
+                - amountUSDT
+      responses:
+        '200':
+          description: Deposit successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+  /wallet/user/{userId}:
+    get:
+      tags:
+        - Wallet
+      summary: Get wallet for a specific user
+      description: Get wallet details for a user by their UUID or displayCode.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      responses:
+        '200':
+          description: Wallet details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '404':
+          description: Wallet or user not found.
+
+  # ----------------------------------------------
+  # Investments
+  # ----------------------------------------------
+  /investments:
+    get:
+      tags:
+        - Investments
+      summary: List all investments
+      description: Get all investments, optionally filtering by user ID.
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter investments by user UUID or displayCode.
+      responses:
+        '200':
+          description: A list of investments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Investment'
+    post:
+      tags:
+        - Investments
+      summary: Create investment (legacy amount-based)
+      description: Creates an investment based on a USDT amount.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestmentCreateLegacy'
+      responses:
+        '201':
+          description: Investment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investment'
+  /investments/invest:
+    post:
+      tags:
+        - Investments
+      summary: Create investment (new token-based)
+      description: Creates an investment based on the number of tokens to buy. This is the preferred method.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestmentCreateToken'
+      responses:
+        '201':
+          description: Investment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investment'
+  /investments/{id}:
+    get:
+      tags:
+        - Investments
+      summary: Get investment by ID
+      description: Get a specific investment by its UUID or displayCode (e.g., INV-000001).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the investment.
+      responses:
+        '200':
+          description: Investment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investment'
+        '404':
+          description: Investment not found.
+
+  # ----------------------------------------------
+  # Portfolio
+  # ----------------------------------------------
+  /portfolio/user/{userId}/detailed:
+    get:
+      tags:
+        - Portfolio
+      summary: Get comprehensive portfolio for a user
+      description: Get a detailed, auto-updated portfolio for a user by their UUID or displayCode.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      responses:
+        '200':
+          description: Detailed user portfolio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioDetailed'
+        '404':
+          description: User not found.
+
+  # ----------------------------------------------
+  # Transactions
+  # ----------------------------------------------
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get all transactions in the system
+      responses:
+        '200':
+          description: An array of all transaction objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+  /transactions/user/{userId}:
+    get:
+      tags:
+        - Transactions
+      summary: Get all transactions for a specific user
+      description: Get all transactions for a user by their UUID or displayCode.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      responses:
+        '200':
+          description: An array of transaction objects for the user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '404':
+          description: User not found.
+
+  # ----------------------------------------------
+  # Payment Methods
+  # ----------------------------------------------
+  /payment-methods:
+    get:
+      tags:
+        - Payment Methods
+      summary: Get all payment methods for a specific user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      responses:
+        '200':
+          description: A list of payment methods for the user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethod'
+    post:
+      tags:
+        - Payment Methods
+      summary: Create a new payment method for a user
+      description: Adds a new payment method (card or bank). Requires verified KYC.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMethodCreate'
+      responses:
+        '201':
+          description: Payment method created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+  /payment-methods/{id}:
+    get:
+      tags:
+        - Payment Methods
+      summary: Get a specific payment method by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the payment method.
+      responses:
+        '200':
+          description: Payment method details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+        '404':
+          description: Payment method not found.
+    delete:
+      tags:
+        - Payment Methods
+      summary: Soft delete a payment method
+      description: Soft deletes a payment method by setting its status to "disabled".
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the payment method.
+      responses:
+        '200':
+          description: Payment method disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+  /payment-methods/{id}/verify:
+    patch:
+      tags:
+        - Payment Methods
+      summary: Verify a payment method
+      description: Sets the status of a payment method to "verified" or "disabled".
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the payment method.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [verified, disabled]
+                  example: verified
+              required:
+                - status
+      responses:
+        '200':
+          description: Payment method status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+  /payment-methods/{id}/default:
+    patch:
+      tags:
+        - Payment Methods
+      summary: Set a payment method as default
+      description: Sets a payment method as default (or unsets it).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the payment method.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isDefault:
+                  type: boolean
+                  example: true
+              required:
+                - isDefault
+      responses:
+        '200':
+          description: Payment method default status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+  /payment-methods/deposit:
+    post:
+      tags:
+        - Payment Methods
+      summary: Initiate a deposit using a payment method
+      description: Initiates a deposit. Uses the default method if methodId is not provided. Requires verified KYC. Emits a wallet.deposit_initiated event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMethodDeposit'
+      responses:
+        '200':
+          description: Deposit initiated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Deposit initiated successfully
+                  amount:
+                    type: string
+                    format: decimal
+                    example: '1000'
+
+  # ----------------------------------------------
+  # KYC
+  # ----------------------------------------------
+  /kyc:
+    get:
+      tags:
+        - KYC
+      summary: List all KYC verifications
+      responses:
+        '200':
+          description: A list of all KYC verifications.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KycVerification'
+    post:
+      tags:
+        - KYC
+      summary: Create or update KYC verification for a user
+      description: Creates a new KYC verification or updates an existing one. If KYC already exists for the user, it will be updated with new information and status reset to "pending".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycCreate'
+      responses:
+        '201':
+          description: KYC verification created or updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycVerification'
+  /kyc/user/{userId}:
+    get:
+      tags:
+        - KYC
+      summary: Get KYC verification for a specific user
+      description: Get KYC verification for a user by their UUID or displayCode.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      responses:
+        '200':
+          description: KYC verification details with user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycVerificationWithUser'
+        '404':
+          description: KYC verification or user not found.
+  /kyc/{id}:
+    get:
+      tags:
+        - KYC
+      summary: Get KYC verification by ID or user displayCode
+      description: Get KYC verification by its UUID or by user displayCode. If a user displayCode is provided, returns the most recent KYC verification for that user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the KYC verification or user displayCode (e.g., USR-000031).
+      responses:
+        '200':
+          description: KYC verification details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycVerification'
+        '404':
+          description: KYC verification not found.
+    patch:
+      tags:
+        - KYC
+      summary: Update KYC verification status (admin only)
+      description: Updates the status of a KYC verification. When status is changed to "verified", it emits a kyc.verified event. The id can be either a KYC verification UUID or user displayCode.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the KYC verification or user displayCode (e.g., USR-000031).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycUpdate'
+      responses:
+        '200':
+          description: KYC verification updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycVerification'
+
+  # ----------------------------------------------
+  # Rewards
+  # ----------------------------------------------
+  /rewards:
+    get:
+      tags:
+        - Rewards
+      summary: List all rewards
+      description: Get all rewards, optionally filtering by user ID.
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter rewards by user UUID or displayCode.
+      responses:
+        '200':
+          description: A list of rewards.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reward'
+  /rewards/distribute:
+    post:
+      tags:
+        - Rewards
+      summary: Distribute ROI for a property
+      description: Distributes ROI proportionally to all investors in a property. Creates one aggregated reward and transaction per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardDistribute'
+      responses:
+        '200':
+          description: ROI distribution initiated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'ROI distribution for property <uuid> completed. 100000 USDT distributed to 2 users.'
+  /rewards/{id}:
+    get:
+      tags:
+        - Rewards
+      summary: Get reward by ID
+      description: Get a specific reward by its UUID or displayCode (e.g., RWD-000001).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the reward.
+      responses:
+        '200':
+          description: Reward details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reward'
+        '404':
+          description: Reward not found.
+
+# ----------------------------------------------
+# Reusable Components
+# ----------------------------------------------
+components:
+  schemas:
+    # ----------------------------------------------
+    # ENTITIES
+    # ----------------------------------------------
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: ORG-000001
+        name:
+          type: string
+          example: HMR Builders
+        description:
+          type: string
+          example: Leading real estate developer
+        website:
+          type: string
+          format: uri
+          example: https://hmrbuilders.com
+        logoUrl:
+          type: string
+          format: uri
+          example: https://example.com/logo.png
+        liquidityUSDT:
+          type: string
+          format: decimal
+          description: Total liquidity held by the organization.
+          example: '250000.000000'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: USR-000001
+        fullName:
+          type: string
+          example: Ali Khan
+        email:
+          type: string
+          format: email
+          example: ali@example.com
+        phone:
+          type: string
+          example: '+92300123456'
+        role:
+          type: string
+          enum: [user, admin]
+          default: user
+        isActive:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Property:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: PROP-000001
+        organizationId:
+          type: string
+          description: UUID or displayCode of the parent organization.
+        title:
+          type: string
+          example: Marina View Residences
+        slug:
+          type: string
+          example: marina-view-residences
+        description:
+          type: string
+        type:
+          type: string
+          example: residential
+        status:
+          type: string
+          enum: [active, pending, sold_out]
+          example: active
+        totalValueUSDT:
+          type: string
+          format: decimal
+          example: '1000000.000000'
+        totalTokens:
+          type: string
+          format: decimal
+          example: '1000.000000'
+        availableTokens:
+          type: string
+          format: decimal
+          example: '996.250000'
+        pricePerTokenUSDT:
+          type: string
+          format: decimal
+          example: '1000.000000'
+        expectedROI:
+          type: number
+          format: double
+          example: 10
+        city:
+          type: string
+          example: Karachi
+        country:
+          type: string
+          example: Pakistan
+        features:
+          type: object
+          example: { 'amenities': ['pool', 'gym'] }
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: ['https://example.com/img1.jpg']
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        balanceUSDT:
+          type: string
+          format: decimal
+          example: '2750.000000'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Investment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: INV-000001
+        userId:
+          type: string
+          format: uuid
+        propertyId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        amountUSDT:
+          type: string
+          format: decimal
+          example: '2500.000000'
+        tokensOwned:
+          type: string
+          format: decimal
+          example: '2.500000'
+        status:
+          type: string
+          enum: [confirmed, pending]
+          example: confirmed
+        createdAt:
+          type: string
+          format: date-time
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: TXN-000005
+        type:
+          type: string
+          enum: [inflow, outflow, investment, reward, deposit, withdrawal]
+          example: inflow
+        fromEntity:
+          type: string
+          example: Ali Khan
+        toEntity:
+          type: string
+          example: HMR Builders
+        amountUSDT:
+          type: string
+          format: decimal
+          example: '2500.000000'
+        propertyId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [completed, pending, failed]
+          example: completed
+        description:
+          type: string
+          example: Liquidity inflow from Ali Khan
+        createdAt:
+          type: string
+          format: date-time
+    Reward:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayCode:
+          type: string
+          example: RWD-000001
+        userId:
+          type: string
+          format: uuid
+        propertyId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        amountUSDT:
+          type: string
+          format: decimal
+          example: '250.000000'
+        transactionId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [card, bank]
+          example: card
+        provider:
+          type: string
+          example: Visa
+        status:
+          type: string
+          enum: [verified, pending, disabled]
+          example: verified
+        isDefault:
+          type: boolean
+          example: true
+        cardDetails:
+          $ref: '#/components/schemas/CardDetails'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CardDetails:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        cardNumber:
+          type: string
+          example: '411111...1111'
+        cardholderName:
+          type: string
+          example: John Doe
+        expiryMonth:
+          type: string
+          example: '12'
+        expiryYear:
+          type: string
+          example: '2025'
+        cvv:
+          type: string
+          example: '***'
+        cardType:
+          type: string
+          example: Visa
+        cardCategory:
+          type: string
+          example: Credit
+        billingAddress:
+          type: string
+        billingCity:
+          type: string
+        billingState:
+          type: string
+        billingPostalCode:
+          type: string
+        billingCountry:
+          type: string
+        issuingBank:
+          type: string
+          example: Chase Bank
+        bankCode:
+          type: string
+          example: CHASE
+        token:
+          type: string
+          example: tok_123456789
+        isTokenized:
+          type: boolean
+          example: true
+    PortfolioDetailed:
+      type: object
+      description: A comprehensive, auto-updating view of a user's portfolio.
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayCode:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        summary:
+          type: object
+          properties:
+            totalInvested:
+              type: string
+              format: decimal
+            totalRewards:
+              type: string
+              format: decimal
+            totalROI:
+              type: number
+              format: double
+            activeInvestments:
+              type: integer
+        statistics:
+          type: object
+          properties:
+            totalCurrentValue:
+              type: string
+              format: decimal
+            netROI:
+              type: string
+              format: decimal
+            averageROI:
+              type: number
+              format: double
+        investments:
+          type: array
+          items:
+            type: object
+            description: Detailed investment info with property and organization context.
+        rewardsHistory:
+          type: array
+          items:
+            type: object
+            description: History of rewards with property context.
+
+    # ----------------------------------------------
+    # KYC SCHEMAS
+    # ----------------------------------------------
+    KycVerification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [cnic, passport, license, other]
+          example: cnic
+        status:
+          type: string
+          enum: [pending, verified, rejected]
+          example: pending
+        documentFrontUrl:
+          type: string
+          format: uri
+          example: https://example.com/front.jpg
+        documentBackUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/back.jpg
+        selfieUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/selfie.jpg
+        reviewer:
+          type: string
+          nullable: true
+          example: admin@example.com
+        rejectionReason:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          example: { "additionalInfo": "Any additional verification data" }
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    KycVerificationWithUser:
+      allOf:
+        - $ref: '#/components/schemas/KycVerification'
+        - type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+    KycCreate:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User's UUID or displayCode.
+          example: USR-000031
+        type:
+          type: string
+          enum: [cnic, passport, license, other]
+          example: cnic
+        documentFrontUrl:
+          type: string
+          format: uri
+          example: https://example.com/front.jpg
+        documentBackUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/back.jpg
+        selfieUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/selfie.jpg
+        metadata:
+          type: object
+          nullable: true
+          example: { "additionalInfo": "Any additional verification data" }
+      required:
+        - userId
+        - type
+        - documentFrontUrl
+    KycUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, verified, rejected]
+          example: verified
+        reviewer:
+          type: string
+          nullable: true
+          example: admin@example.com
+        rejectionReason:
+          type: string
+          nullable: true
+
+    # ----------------------------------------------
+    # REQUEST BODIES (CREATE)
+    # ----------------------------------------------
+    OrganizationCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: HMR Builders
+        description:
+          type: string
+          example: Leading real estate developer
+        website:
+          type: string
+          format: uri
+          example: https://hmrbuilders.com
+        logoUrl:
+          type: string
+          format: uri
+          example: https://example.com/logo.png
+      required:
+        - name
+    UserCreate:
+      type: object
+      properties:
+        fullName:
+          type: string
+          example: Ali Khan
+        email:
+          type: string
+          format: email
+          example: ali@example.com
+        phone:
+          type: string
+          example: '+92300123456'
+        role:
+          type: string
+          enum: [user, admin]
+          default: user
+      required:
+        - fullName
+        - email
+    PropertyCreate:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: UUID or displayCode (e.g., ORG-000001).
+          example: ORG-000001
+        title:
+          type: string
+          example: Marina View Residences
+        slug:
+          type: string
+          example: marina-view-residences
+        description:
+          type: string
+          example: Luxury waterfront apartments
+        type:
+          type: string
+          example: residential
+        status:
+          type: string
+          enum: [active, pending]
+          example: active
+        totalValueUSDT:
+          type: number
+          format: double
+          example: 1000000
+        totalTokens:
+          type: number
+          format: double
+          example: 1000
+        expectedROI:
+          type: number
+          format: double
+          example: 10
+        city:
+          type: string
+          example: Karachi
+        country:
+          type: string
+          example: Pakistan
+        features:
+          type: object
+          example: { 'amenities': ['pool', 'gym'] }
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: ['https://example.com/img1.jpg']
+      required:
+        - organizationId
+        - title
+        - slug
+        - totalValueUSDT
+        - totalTokens
+    InvestmentCreateLegacy:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User's UUID or displayCode.
+          example: USR-000001
+        propertyId:
+          type: string
+          description: Property's UUID or displayCode.
+          example: PROP-000001
+        amountUSDT:
+          type: number
+          format: double
+          example: 2500
+      required:
+        - userId
+        - propertyId
+        - amountUSDT
+    InvestmentCreateToken:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User's UUID or displayCode.
+          example: USR-000001
+        propertyId:
+          type: string
+          description: Property's UUID or displayCode.
+          example: PROP-000001
+        tokensToBuy:
+          type: number
+          format: double
+          example: 2.5
+      required:
+        - userId
+        - propertyId
+        - tokensToBuy
+    PaymentMethodCreate:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User's UUID or displayCode.
+          example: USR-000031
+        type:
+          type: string
+          enum: [card, bank]
+          example: card
+        provider:
+          type: string
+          example: Visa
+        isDefault:
+          type: boolean
+          example: true
+        cardDetails:
+          type: object
+          description: Required only if type is 'card'.
+          properties:
+            cardNumber:
+              type: string
+              example: '4111111111111111'
+            cardholderName:
+              type: string
+              example: John Doe
+            expiryMonth:
+              type: string
+              example: '12'
+            expiryYear:
+              type: string
+              example: '2025'
+            cvv:
+              type: string
+              example: '123'
+            cardType:
+              type: string
+              example: Visa
+            cardCategory:
+              type: string
+              example: Credit
+            billingAddress:
+              type: string
+              example: 123 Main Street
+            billingCity:
+              type: string
+              example: New York
+            billingState:
+              type: string
+              example: NY
+            billingPostalCode:
+              type: string
+              example: '10001'
+            billingCountry:
+              type: string
+              example: United States
+            issuingBank:
+              type: string
+              example: Chase Bank
+            bankCode:
+              type: string
+              example: CHASE
+            token:
+              type: string
+              example: tok_123456789
+            isTokenized:
+              type: boolean
+              example: true
+      required:
+        - userId
+        - type
+        - provider
+    PaymentMethodDeposit:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User's UUID or displayCode.
+          example: USR-000031
+        amountUSDT:
+          type: number
+          format: double
+          example: 1000
+        methodId:
+          type: string
+          format: uuid
+          description: Specific payment method UUID. If omitted, the user's default method is used.
+          nullable: true
+      required:
+        - userId
+        - amountUSDT
+    RewardDistribute:
+      type: object
+      properties:
+        propertyId:
+          type: string
+          description: Property's UUID or displayCode.
+          example: PROP-000001
+        totalRoiUSDT:
+          type: number
+          format: double
+          example: 100000
+      required:
+        - propertyId
+        - totalRoiUSDT
+
+    # ----------------------------------------------
+    # RESPONSE-ONLY
+    # ----------------------------------------------
+    OrganizationLiquidity:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          example: ORG-000001
+        organizationName:
+          type: string
+          example: HMR Builders
+        liquidityUSDT:
+          type: string
+          format: decimal
+          example: '250000.000000'
+        lastUpdated:
+          type: string
+          format: date-time

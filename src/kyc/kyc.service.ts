@@ -80,10 +80,29 @@ export class KycService {
 
   async update(id: string, dto: UpdateKycDto) {
     return this.dataSource.transaction(async (manager) => {
-      const kyc = await manager.findOne(KycVerification, {
-        where: { id },
-        relations: ['user'],
-      });
+      // Check if id is UUID or displayCode (for user lookup)
+      const isIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
+      let kyc: KycVerification | null;
+      
+      if (isIdUuid) {
+        // Direct KYC ID lookup
+        kyc = await manager.findOne(KycVerification, {
+          where: { id },
+          relations: ['user'],
+        });
+      } else {
+        // Find user by displayCode, then find their KYC
+        const user = await manager.findOne(User, { where: { displayCode: id } });
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
+        kyc = await manager.findOne(KycVerification, {
+          where: { userId: user.id },
+          relations: ['user'],
+          order: { createdAt: 'DESC' }
+        });
+      }
 
       if (!kyc) {
         throw new NotFoundException('KYC verification not found');
@@ -157,10 +176,25 @@ export class KycService {
   }
 
   async findOne(id: string) {
-    return this.kycRepo.findOne({ 
-      where: { id }, 
-      relations: ['user'] 
-    });
+    // Check if id is UUID or displayCode (for user lookup)
+    const isIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    if (isIdUuid) {
+      // Direct KYC ID lookup
+      return this.kycRepo.findOne({ 
+        where: { id }, 
+        relations: ['user'] 
+      });
+    } else {
+      // Find user by displayCode, then find their KYC
+      const user = await this.dataSource.getRepository(User).findOne({ where: { displayCode: id } });
+      if (!user) return null;
+      return this.kycRepo.findOne({ 
+        where: { userId: user.id },
+        relations: ['user'],
+        order: { createdAt: 'DESC' }
+      });
+    }
   }
 
   async findAll() {
