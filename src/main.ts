@@ -1,34 +1,55 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import fastify from 'fastify';
 import { AppModule } from './app.module';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
-let app: any;
 
-async function createNestApp() {
-  if (!app) {
-    const expressApp = express();
-    app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-    app.enableCors();
-    await app.init();
-  }
+let cachedApp: NestFastifyApplication | null = null;
+
+async function createNestApp(): Promise<NestFastifyApplication> {
+  if (cachedApp) return cachedApp;
+
+  const fastifyInstance = fastify({ logger: false });
+
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter(fastifyInstance)
+  );
+
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.enableCors();
+
+  await app.init();
+  await app.getHttpAdapter().getInstance().ready();
+
+  cachedApp = app;
   return app;
 }
 
-// For Vercel serverless
-export default async (req: any, res: any) => {
-  const nestApp = await createNestApp();
-  return nestApp.getHttpAdapter().getInstance()(req, res);
-};
+// Default export for Vercel serverless function
+export default async function handler(req: any, res: any) {
+  const app = await createNestApp();
+  const fastifyInstance = app.getHttpAdapter().getInstance();
 
-// For local development
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  
+  injectSpeedInsights();
+
+
+
+  // Forward request to Fastify server
+  fastifyInstance.server.emit('request', req, res);
+ 
+}
+
+// Also, bootstrap locally if not in production (optional)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   async function bootstrap() {
-    const nestApp = await createNestApp();
-    await nestApp.listen(process.env.PORT ?? 3000);
-    console.log(`🚀 Server running on http://localhost:${process.env.PORT ?? 3000}`);
+    const app = await createNestApp();
+    await app.listen(process.env.PORT || 3000, '0.0.0.0');
+    console.log(`🚀 App listening on port ${process.env.PORT || 3000}`);
   }
   bootstrap();
 }
