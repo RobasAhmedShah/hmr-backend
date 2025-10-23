@@ -241,6 +241,86 @@ paths:
                 $ref: '#/components/schemas/Property'
         '404':
           description: Property not found.
+    patch:
+      tags:
+        - Properties
+      summary: Update property fields dynamically
+      description: Update property fields dynamically. You can update any field by passing the field name and its new value.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the property.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyUpdate'
+      responses:
+        '200':
+          description: Property updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Property not found.
+    delete:
+      tags:
+        - Properties
+      summary: Delete a property
+      description: Delete a property permanently by its UUID or displayCode.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the property.
+      responses:
+        '200':
+          description: Property deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Property 'PROP-000001' has been deleted successfully"
+        '404':
+          description: Property not found.
+  /properties/{id}/status:
+    patch:
+      tags:
+        - Properties
+      summary: Update property status
+      description: Update property status only. Status can be any string value.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the property.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyStatusUpdate'
+      responses:
+        '200':
+          description: Property status updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Property not found.
 
   # ----------------------------------------------
   # Wallet
@@ -1436,6 +1516,71 @@ components:
         - slug
         - totalValueUSDT
         - totalTokens
+    PropertyUpdate:
+      type: object
+      description: Update property fields dynamically. All fields are optional.
+      properties:
+        title:
+          type: string
+          example: Updated Property Title
+        slug:
+          type: string
+          example: updated-property-slug
+        description:
+          type: string
+          example: Updated description
+        type:
+          type: string
+          enum: [residential, commercial, mixed]
+          example: commercial
+        status:
+          type: string
+          description: Can be any string value
+          example: active
+        totalValueUSDT:
+          type: number
+          format: double
+          example: 1500000
+        totalTokens:
+          type: number
+          format: double
+          example: 1500
+        availableTokens:
+          type: number
+          format: double
+          example: 1200
+        pricePerTokenUSDT:
+          type: number
+          format: double
+          example: 1000
+        expectedROI:
+          type: number
+          format: double
+          example: 12.5
+        city:
+          type: string
+          example: Lahore
+        country:
+          type: string
+          example: Pakistan
+        features:
+          type: object
+          example: { "amenities": ["pool", "gym", "parking"] }
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: ["https://example.com/updated-img1.jpg"]
+    PropertyStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Can be any string value
+          example: active
+      required:
+        - status
     InvestmentCreateLegacy:
       type: object
       properties:
