@@ -689,3 +689,240 @@ Get reward by UUID or displayCode (e.g., RWD-000001).
 - **Rewards**: ROI distribution creates one reward and one transaction per user (aggregated across all their investments in a property).
 - **Traceability**: All transactions include `fromEntity`, `toEntity`, `propertyId`, and `organizationId` for complete audit trails.
 
+---
+
+## 10. Admin Dashboard & Analytics
+
+### GET /admin/dashboard
+Get comprehensive dashboard statistics with optional filtering.
+
+**Query Parameters (all optional):**
+- `userId`: Filter by specific user (UUID or displayCode like USR-000001)
+- `organizationId`: Filter by specific organization (UUID or displayCode like ORG-000001)
+- `propertyId`: Filter by specific property (UUID or displayCode like PROP-000001)
+
+**Examples:**
+- Platform-wide: `GET /admin/dashboard`
+- User-specific: `GET /admin/dashboard?userId=USR-000001`
+- Organization-specific: `GET /admin/dashboard?organizationId=ORG-000001`
+- Property-specific: `GET /admin/dashboard?propertyId=PROP-000001`
+
+**Response (Platform-wide):**
+```json
+{
+  "overview": {
+    "totalUsers": 150,
+    "activeUsers": 142,
+    "totalOrganizations": 5,
+    "totalProperties": 25,
+    "totalInvestments": 89,
+    "totalInvestmentValue": "1250000.00",
+    "totalTransactions": 234,
+    "totalTransactionVolume": "1500000.00",
+    "platformRevenue": "250000.00",
+    "totalRewardsDistributed": "45000.00"
+  },
+  "users": {
+    "total": 150,
+    "active": 142,
+    "inactive": 8,
+    "newThisMonth": 23
+  },
+  "kyc": {
+    "pending": 12,
+    "verified": 130,
+    "rejected": 8
+  },
+  "properties": {
+    "active": 20,
+    "soldout": 3,
+    "construction": 2,
+    "total": 25
+  },
+  "investments": {
+    "count": 89,
+    "totalValue": "1250000.00",
+    "averageInvestment": "14044.94"
+  },
+  "transactions": {
+    "count": 234,
+    "totalVolume": "1500000.00",
+    "byType": {
+      "deposit": 45,
+      "investment": 89,
+      "reward": 67,
+      "withdrawal": 12,
+      "inflow": 21
+    }
+  },
+  "recentActivity": {
+    "recentInvestments": [...],
+    "recentTransactions": [...],
+    "recentUsers": [...],
+    "pendingKycReviews": [...]
+  }
+}
+```
+
+**Response (User-specific):**
+```json
+{
+  "user": {
+    "id": "uuid...",
+    "displayCode": "USR-000032",
+    "fullName": "HMH",
+    "email": "hmh@gmail.com",
+    "phone": "923442244123",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-10-22T08:53:45.309Z",
+    "updatedAt": "2025-10-22T08:53:45.309Z"
+  },
+  "wallet": {
+    "id": "uuid...",
+    "balanceUSDT": "100000.00",
+    "lockedUSDT": "0.00",
+    "totalDepositedUSDT": "4000.00",
+    "totalWithdrawnUSDT": "0.00",
+    "createdAt": "2025-10-22T08:53:45.309Z",
+    "updatedAt": "2025-10-23T08:56:41.107Z"
+  },
+  "kyc": {
+    "id": "uuid...",
+    "type": "cnic",
+    "status": "pending",
+    "submittedAt": "2025-10-22T08:53:46.080Z",
+    "reviewedAt": null,
+    "rejectionReason": null
+  },
+  "investments": {
+    "recent": [...],
+    "totalValue": "0.00",
+    "count": 0
+  },
+  "rewards": {
+    "recent": [...],
+    "totalAmount": "0.00",
+    "count": 0
+  },
+  "transactions": {
+    "recent": [...],
+    "totalVolume": "4000.00",
+    "count": 4
+  },
+  "paymentMethods": {
+    "methods": [...],
+    "verifiedCount": 0,
+    "totalCount": 0
+  },
+  "portfolio": {
+    "totalInvested": "0.00",
+    "activeInvestments": 0,
+    "totalEarned": "0.00",
+    "totalROI": "0.00",
+    "lastUpdated": "2025-10-23T08:56:41.107Z"
+  }
+}
+```
+
+### GET /admin/analytics
+Get growth metrics and time-series analytics.
+
+**Query Parameters:**
+- `period`: '7d' | '30d' | '90d' | '1y' (fixed periods)
+- `from`: ISO date string (custom range start)
+- `to`: ISO date string (custom range end)
+- `userId`: Filter by user (UUID or displayCode)
+- `organizationId`: Filter by organization (UUID or displayCode)
+- `propertyId`: Filter by property (UUID or displayCode)
+
+**Examples:**
+- Last 30 days: `GET /admin/analytics?period=30d`
+- Custom range: `GET /admin/analytics?from=2024-01-01&to=2024-12-31`
+- User analytics: `GET /admin/analytics?userId=USR-000001&period=90d`
+- Organization analytics: `GET /admin/analytics?organizationId=ORG-000001&period=1y`
+
+**Response:**
+```json
+{
+  "period": {
+    "from": "2024-10-01T00:00:00.000Z",
+    "to": "2024-10-31T23:59:59.999Z"
+  },
+  "timeSeries": {
+    "users": [
+      { "date": "2024-10-01T00:00:00.000Z", "count": 5 },
+      { "date": "2024-10-02T00:00:00.000Z", "count": 3 },
+      ...
+    ],
+    "investments": [
+      { "date": "2024-10-01T00:00:00.000Z", "count": 12, "volume": "150000.00" },
+      { "date": "2024-10-02T00:00:00.000Z", "count": 8, "volume": "95000.00" },
+      ...
+    ],
+    "rewards": [
+      { "date": "2024-10-01T00:00:00.000Z", "count": 45, "amount": "12500.00" },
+      { "date": "2024-10-02T00:00:00.000Z", "count": 38, "amount": "9800.00" },
+      ...
+    ],
+    "transactions": [
+      { "date": "2024-10-01T00:00:00.000Z", "count": 25, "volume": "180000.00" },
+      { "date": "2024-10-02T00:00:00.000Z", "count": 18, "volume": "120000.00" },
+      ...
+    ],
+    "kycVerifications": [
+      { "date": "2024-10-01T00:00:00.000Z", "count": 8 },
+      { "date": "2024-10-02T00:00:00.000Z", "count": 5 },
+      ...
+    ]
+  },
+  "aggregated": {
+    "users": {
+      "total": 23,
+      "average": 0.74,
+      "peak": { "date": "2024-10-15T00:00:00.000Z", "count": 5 }
+    },
+    "investments": {
+      "total": 89,
+      "totalValue": "1250000.00",
+      "average": 2.87,
+      "peak": { "date": "2024-10-20T00:00:00.000Z", "count": 8, "volume": "120000.00" }
+    },
+    "rewards": {
+      "total": 67,
+      "totalAmount": "45000.00",
+      "average": 2.16,
+      "peak": { "date": "2024-10-25T00:00:00.000Z", "count": 12, "amount": "3500.00" }
+    },
+    "transactions": {
+      "total": 234,
+      "totalVolume": "1500000.00",
+      "average": 7.55,
+      "peak": { "date": "2024-10-18T00:00:00.000Z", "count": 15, "volume": "180000.00" }
+    }
+  },
+  "comparison": {
+    "previousPeriod": {
+      "users": { "total": 18, "average": 0.58, "peak": null },
+      "investments": { "total": 65, "totalValue": "980000.00", "average": 2.10, "peak": null },
+      "rewards": { "total": 45, "totalAmount": "32000.00", "average": 1.45, "peak": null },
+      "transactions": { "total": 189, "totalVolume": "1200000.00", "average": 6.10, "peak": null }
+    },
+    "changePercentage": {
+      "users": 27.78,
+      "investments": 36.92,
+      "rewards": 48.89,
+      "transactions": 23.81
+    }
+  }
+}
+```
+
+**Features:**
+- **Dynamic Filtering**: Filter by user, organization, or property using UUID or displayCode
+- **Time Periods**: Support for fixed periods (7d, 30d, 90d, 1y) and custom date ranges
+- **Time-Series Data**: Daily aggregated metrics for users, investments, rewards, transactions, and KYC verifications
+- **Growth Analytics**: Period-over-period comparison with percentage changes
+- **Peak Analysis**: Identify highest activity days with counts and volumes
+- **Comprehensive Metrics**: Total counts, averages, and financial aggregations
+
