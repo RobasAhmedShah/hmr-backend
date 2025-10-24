@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
 import { DataSource, Repository, EntityManager } from 'typeorm';
@@ -9,6 +9,7 @@ import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../admin/entities/user.entity';
 import { KycVerification } from '../kyc/entities/kyc-verification.entity';
 import { DepositDto } from './dto/deposit.dto';
+import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { WalletCreditedEvent } from '../events/wallet.events';
 import type { WalletDepositInitiatedEvent, WalletFundedEvent } from '../events/payment.events';
 
@@ -196,5 +197,42 @@ export class WalletService {
       this.logger.error('Failed to emit wallet funded event:', error);
       // Don't throw - let the main operation continue
     }
+  }
+
+  async findByIdOrDisplayCode(id: string): Promise<Wallet | null> {
+    // Check if id is UUID or displayCode (for user lookup)
+    const isIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    if (isIdUuid) {
+      // Direct wallet ID lookup
+      return this.walletRepo.findOne({ where: { id } });
+    } else {
+      // Find user by displayCode, then find their wallet
+      const user = await this.dataSource.getRepository(User).findOne({ where: { displayCode: id } });
+      if (!user) return null;
+      return this.walletRepo.findOne({ where: { userId: user.id } });
+    }
+  }
+
+  async update(id: string, dto: UpdateWalletDto): Promise<Wallet> {
+    const wallet = await this.findByIdOrDisplayCode(id);
+    if (!wallet) {
+      throw new NotFoundException(`Wallet with id or user displayCode '${id}' not found`);
+    }
+
+    const updateData: Partial<Wallet> = {};
+
+    // Update only provided fields
+    if (dto.balanceUSDT !== undefined) updateData.balanceUSDT = new Decimal(dto.balanceUSDT);
+    if (dto.lockedUSDT !== undefined) updateData.lockedUSDT = new Decimal(dto.lockedUSDT);
+    if (dto.totalDepositedUSDT !== undefined) updateData.totalDepositedUSDT = new Decimal(dto.totalDepositedUSDT);
+    if (dto.totalWithdrawnUSDT !== undefined) updateData.totalWithdrawnUSDT = new Decimal(dto.totalWithdrawnUSDT);
+
+    await this.walletRepo.update(wallet.id, updateData);
+    const updatedWallet = await this.findByIdOrDisplayCode(id);
+    if (!updatedWallet) {
+      throw new NotFoundException(`Wallet with id or user displayCode '${id}' not found after update`);
+    }
+    return updatedWallet;
   }
 }

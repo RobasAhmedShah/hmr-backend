@@ -111,6 +111,41 @@ List all users.
 
 ---
 
+## 2.1. Users (Direct Management)
+
+### PATCH /users/:id
+Update user fields dynamically. You can update any field by passing the field name and its new value.
+
+**Note:** `id` can be either a UUID or displayCode (e.g., "USR-000001").
+
+**Body (all fields optional):**
+```json
+{
+  "fullName": "Updated Full Name",
+  "email": "updated@example.com",
+  "phone": "+923001234567",
+  "role": "admin",
+  "isActive": false
+}
+```
+
+**Response:**
+```json
+{
+  "id": "uuid...",
+  "displayCode": "USR-000001",
+  "fullName": "Updated Full Name",
+  "email": "updated@example.com",
+  "phone": "+923001234567",
+  "role": "admin",
+  "isActive": false,
+  "createdAt": "2025-10-17T14:32:01.123Z",
+  "updatedAt": "2025-10-17T15:45:30.456Z"
+}
+```
+
+---
+
 ## 3. Properties
 
 ### POST /properties
@@ -226,6 +261,35 @@ Get wallet for a specific user.
 
 ### GET /wallet
 List all wallets.
+
+### PATCH /wallet/:id
+Update wallet fields dynamically. You can update any field by passing the field name and its new value.
+
+**Note:** `id` can be either a wallet UUID or user displayCode (e.g., "USR-000001").
+
+**Body (all fields optional):**
+```json
+{
+  "balanceUSDT": 10000,
+  "lockedUSDT": 500,
+  "totalDepositedUSDT": 15000,
+  "totalWithdrawnUSDT": 2000
+}
+```
+
+**Response:**
+```json
+{
+  "id": "uuid...",
+  "userId": "uuid...",
+  "balanceUSDT": "10000.000000",
+  "lockedUSDT": "500.000000",
+  "totalDepositedUSDT": "15000.000000",
+  "totalWithdrawnUSDT": "2000.000000",
+  "createdAt": "2025-10-17T14:32:01.123Z",
+  "updatedAt": "2025-10-17T15:45:30.456Z"
+}
+```
 
 ---
 
@@ -563,16 +627,45 @@ Get KYC verification by ID or user displayCode.
 **Note:** `id` can be either a KYC verification UUID or a user displayCode (e.g., "USR-000031"). If a user displayCode is provided, it returns the most recent KYC verification for that user.
 
 ### PATCH /kyc/:id
-Update KYC verification status (admin only).
+Update KYC verification fields dynamically. You can update any field by passing the field name and its new value.
 
-**Note:** `id` can be either a KYC verification UUID or a user displayCode (e.g., "USR-000031"). If a user displayCode is provided, it updates the most recent KYC verification for that user.
+**Note:** `id` can be either a KYC verification UUID or user displayCode (e.g., "USR-000031"). If a user displayCode is provided, it updates the most recent KYC verification for that user.
 
-**Body:**
+**Body (all fields optional):**
 ```json
 {
+  "type": "passport",
   "status": "verified",
+  "documentFrontUrl": "https://example.com/new-front.jpg",
+  "documentBackUrl": "https://example.com/new-back.jpg",
+  "selfieUrl": "https://example.com/new-selfie.jpg",
   "reviewer": "admin@example.com",
-  "rejectionReason": null
+  "rejectionReason": null,
+  "metadata": {
+    "additionalInfo": "Updated verification data"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "id": "ebde11ec-5d5c-457d-ba87-b83f431962c1",
+  "userId": "9e354ce4-c7ab-4d5b-ba6c-50783d4c01e1",
+  "type": "passport",
+  "status": "verified",
+  "documentFrontUrl": "https://example.com/new-front.jpg",
+  "documentBackUrl": "https://example.com/new-back.jpg",
+  "selfieUrl": "https://example.com/new-selfie.jpg",
+  "reviewer": "admin@example.com",
+  "rejectionReason": null,
+  "metadata": {
+    "additionalInfo": "Updated verification data"
+  },
+  "submittedAt": "2025-10-22T11:50:05.198Z",
+  "reviewedAt": "2025-10-22T15:45:30.456Z",
+  "createdAt": "2025-10-22T08:38:25.822Z",
+  "updatedAt": "2025-10-22T15:45:30.456Z"
 }
 ```
 

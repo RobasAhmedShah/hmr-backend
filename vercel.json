@@ -12,7 +12,12 @@
       "dest": "/api",
       "methods": [
         "GET","POST","PUT","PATCH","OPTIONS","DELETE","HEAD","CONNECT","TRACE"
-      ]
+      ],
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+      }
     }
   ]
 }
