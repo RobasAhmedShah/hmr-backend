@@ -23,7 +23,44 @@ async function createNestApp(): Promise<NestFastifyApplication> {
   );
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.enableCors();
+  
+  // Comprehensive CORS configuration for production deployment
+  app.enableCors({
+    origin: true, // Allow all origins in production
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'Accept', 
+      'Origin', 
+      'X-Requested-With',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods'
+    ],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  });
+
+  // Additional CORS handling for serverless environments
+  const fastifyApp = app.getHttpAdapter().getInstance();
+  fastifyApp.addHook('onRequest', async (request, reply) => {
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      reply.header('Access-Control-Allow-Origin', '*');
+      reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+      reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+      reply.header('Access-Control-Max-Age', '86400');
+      reply.code(204).send();
+      return;
+    }
+    
+    // Add CORS headers to all responses
+    reply.header('Access-Control-Allow-Origin', '*');
+    reply.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+    reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+  });
 
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
@@ -34,17 +71,28 @@ async function createNestApp(): Promise<NestFastifyApplication> {
 
 // Default export for Vercel serverless function
 export default async function handler(req: any, res: any) {
+  // Handle CORS preflight requests at the serverless level
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.status(204).end();
+    return;
+  }
+
   const app = await createNestApp();
   const fastifyInstance = app.getHttpAdapter().getInstance();
 
+  // Add CORS headers to all responses
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
   
   injectSpeedInsights();
 
-
-
   // Forward request to Fastify server
   fastifyInstance.server.emit('request', req, res);
- 
 }
 
 // Also, bootstrap locally if not in production (optional)

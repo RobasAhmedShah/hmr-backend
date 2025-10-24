@@ -108,15 +108,30 @@ export class KycService {
         throw new NotFoundException('KYC verification not found');
       }
 
-      // Update KYC fields
+      // Update KYC fields dynamically
+      if (dto.type !== undefined) {
+        kyc.type = dto.type;
+      }
       if (dto.status !== undefined) {
         kyc.status = dto.status;
+      }
+      if (dto.documentFrontUrl !== undefined) {
+        kyc.documentFrontUrl = dto.documentFrontUrl;
+      }
+      if (dto.documentBackUrl !== undefined) {
+        kyc.documentBackUrl = dto.documentBackUrl;
+      }
+      if (dto.selfieUrl !== undefined) {
+        kyc.selfieUrl = dto.selfieUrl;
       }
       if (dto.reviewer !== undefined) {
         kyc.reviewer = dto.reviewer;
       }
       if (dto.rejectionReason !== undefined) {
         kyc.rejectionReason = dto.rejectionReason;
+      }
+      if (dto.metadata !== undefined) {
+        kyc.metadata = dto.metadata;
       }
 
       // Set reviewedAt if status is being changed to verified or rejected

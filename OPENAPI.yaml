@@ -173,6 +173,38 @@ paths:
                 $ref: '#/components/schemas/User'
 
   # ----------------------------------------------
+  # Users (Direct Management)
+  # ----------------------------------------------
+  /users/{id}:
+    patch:
+      tags:
+        - Users (Direct Management)
+      summary: Update user fields dynamically
+      description: Update user fields dynamically. You can update any field by passing the field name and its new value.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found.
+
+  # ----------------------------------------------
   # Properties
   # ----------------------------------------------
   /properties:
@@ -395,6 +427,34 @@ paths:
                 $ref: '#/components/schemas/Wallet'
         '404':
           description: Wallet or user not found.
+  /wallet/{id}:
+    patch:
+      tags:
+        - Wallet
+      summary: Update wallet fields dynamically
+      description: Update wallet fields dynamically. You can update any field by passing the field name and its new value.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the wallet or user displayCode.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletUpdate'
+      responses:
+        '200':
+          description: Wallet updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '404':
+          description: Wallet not found.
 
   # ----------------------------------------------
   # Investments
@@ -810,8 +870,8 @@ paths:
     patch:
       tags:
         - KYC
-      summary: Update KYC verification status (admin only)
-      description: Updates the status of a KYC verification. When status is changed to "verified", it emits a kyc.verified event. The id can be either a KYC verification UUID or user displayCode.
+      summary: Update KYC verification fields dynamically
+      description: Update KYC verification fields dynamically. You can update any field by passing the field name and its new value. When status is changed to "verified", it emits a kyc.verified event. The id can be either a KYC verification UUID or user displayCode.
       parameters:
         - name: id
           in: path
@@ -1500,11 +1560,30 @@ components:
         - documentFrontUrl
     KycUpdate:
       type: object
+      description: Update KYC verification fields dynamically. All fields are optional.
       properties:
+        type:
+          type: string
+          enum: [cnic, passport, license, other]
+          example: passport
         status:
           type: string
           enum: [pending, verified, rejected]
           example: verified
+        documentFrontUrl:
+          type: string
+          format: uri
+          example: https://example.com/new-front.jpg
+        documentBackUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/new-back.jpg
+        selfieUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/new-selfie.jpg
         reviewer:
           type: string
           nullable: true
@@ -1512,6 +1591,10 @@ components:
         rejectionReason:
           type: string
           nullable: true
+        metadata:
+          type: object
+          nullable: true
+          example: { "additionalInfo": "Updated verification data" }
 
     # ----------------------------------------------
     # REQUEST BODIES (CREATE)
@@ -1555,6 +1638,47 @@ components:
       required:
         - fullName
         - email
+    UserUpdate:
+      type: object
+      description: Update user fields dynamically. All fields are optional.
+      properties:
+        fullName:
+          type: string
+          example: Updated Full Name
+        email:
+          type: string
+          format: email
+          example: updated@example.com
+        phone:
+          type: string
+          example: "+923001234567"
+        role:
+          type: string
+          enum: [user, admin]
+          example: admin
+        isActive:
+          type: boolean
+          example: false
+    WalletUpdate:
+      type: object
+      description: Update wallet fields dynamically. All fields are optional.
+      properties:
+        balanceUSDT:
+          type: number
+          format: double
+          example: 10000
+        lockedUSDT:
+          type: number
+          format: double
+          example: 500
+        totalDepositedUSDT:
+          type: number
+          format: double
+          example: 15000
+        totalWithdrawnUSDT:
+          type: number
+          format: double
+          example: 2000
     PropertyCreate:
       type: object
       properties:
