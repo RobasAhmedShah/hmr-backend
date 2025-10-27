@@ -14,7 +14,7 @@ export class PropertiesController {
   }
 
   @Get()
-  async findAll(@Query('slug') slug?: string, @Query('displayCode') displayCode?: string) {
+  async findAll(@Query('slug') slug?: string, @Query('displayCode') displayCode?: string, @Query('org') org?: string) {
     if (slug) {
       const property = await this.propertiesService.findBySlugOrDisplayCode(slug);
       if (!property) throw new NotFoundException('Property not found');
@@ -24,6 +24,9 @@ export class PropertiesController {
       const property = await this.propertiesService.findByDisplayCode(displayCode);
       if (!property) throw new NotFoundException('Property not found');
       return property;
+    }
+    if (org) {
+      return this.propertiesService.findByOrganization(org);
     }
     return this.propertiesService.findAll();
   }
