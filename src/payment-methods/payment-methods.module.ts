@@ -6,10 +6,12 @@ import { PaymentMethod } from './entities/payment-method.entity';
 import { CardDetails } from './entities/card-details.entity';
 import { User } from '../admin/entities/user.entity';
 import { KycVerification } from '../kyc/entities/kyc-verification.entity';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PaymentMethod, CardDetails, User, KycVerification]),
+    WalletModule,
   ],
   controllers: [PaymentMethodsController],
   providers: [PaymentMethodsService],
