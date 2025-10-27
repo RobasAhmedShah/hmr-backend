@@ -109,6 +109,42 @@ Create a user (auto-creates wallet, KYC verification, and portfolio; auto-genera
 ### GET /admin/users
 List all users.
 
+### GET /admin/users?org=ORG-000001
+Get all users who have invested in properties owned by a specific organization.
+
+**Query Parameters:**
+- `org` (string): Organization UUID or displayCode (e.g., "ORG-000001")
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid...",
+    "displayCode": "USR-000001",
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": "+923001234567",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-10-17T14:32:01.123Z",
+    "updatedAt": "2025-10-17T15:45:30.456Z"
+  },
+  {
+    "id": "uuid...",
+    "displayCode": "USR-000002",
+    "fullName": "Jane Smith",
+    "email": "jane@example.com",
+    "phone": "+923001234568",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-10-17T14:32:01.123Z",
+    "updatedAt": "2025-10-17T15:45:30.456Z"
+  }
+]
+```
+
+**Note:** This endpoint returns only users who have at least one investment in properties owned by the specified organization. Users are returned as distinct records (no duplicates).
+
 ---
 
 ## 2.1. Users (Direct Management)
@@ -180,6 +216,45 @@ Get property by slug.
 
 ### GET /properties?displayCode=PROP-000001
 Get property by displayCode.
+
+### GET /properties?org=ORG-000001
+Get all properties owned by a specific organization.
+
+**Query Parameters:**
+- `org` (string): Organization UUID or displayCode (e.g., "ORG-000001")
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid...",
+    "displayCode": "PROP-000001",
+    "organizationId": "uuid...",
+    "organization": {
+      "id": "uuid...",
+      "displayCode": "ORG-000001",
+      "name": "HMR Builders",
+      "description": "Leading real estate developer"
+    },
+    "title": "Marina View Residences",
+    "slug": "marina-view-residences",
+    "description": "Luxury waterfront apartments",
+    "type": "residential",
+    "status": "active",
+    "totalValueUSDT": "1000000.000000",
+    "totalTokens": "1000.000000",
+    "availableTokens": "750.000000",
+    "pricePerTokenUSDT": "1000.000000",
+    "expectedROI": "10.00",
+    "city": "Karachi",
+    "country": "Pakistan",
+    "features": {"amenities": ["pool", "gym"]},
+    "images": ["https://example.com/img1.jpg"],
+    "createdAt": "2025-10-17T14:32:01.123Z",
+    "updatedAt": "2025-10-17T15:45:30.456Z"
+  }
+]
+```
 
 ### GET /properties/:id
 Get property by UUID or displayCode (e.g., PROP-000001).
@@ -334,8 +409,220 @@ Get investments for a specific user.
 
 **Note:** `userId` can be either a UUID or a display code (e.g., "USR-000001").
 
+### GET /investments?org=ORG-000001
+Get all investments in properties owned by a specific organization.
+
+**Query Parameters:**
+- `org` (string): Organization UUID or displayCode (e.g., "ORG-000001")
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid...",
+    "displayCode": "INV-000001",
+    "userId": "uuid...",
+    "user": {
+      "id": "uuid...",
+      "displayCode": "USR-000001",
+      "fullName": "John Doe",
+      "email": "john@example.com"
+    },
+    "propertyId": "uuid...",
+    "property": {
+      "id": "uuid...",
+      "displayCode": "PROP-000001",
+      "title": "Marina View Residences",
+      "organizationId": "uuid...",
+      "organization": {
+        "id": "uuid...",
+        "displayCode": "ORG-000001",
+        "name": "HMR Builders"
+      }
+    },
+    "organizationId": "uuid...",
+    "tokensPurchased": "2.500000",
+    "amountUSDT": "2500.000000",
+    "status": "active",
+    "paymentStatus": "completed",
+    "expectedROI": "10.00",
+    "createdAt": "2025-10-17T14:32:01.123Z",
+    "updatedAt": "2025-10-17T15:45:30.456Z"
+  }
+]
+```
+
 ### GET /investments/:id
 Get investment by UUID or displayCode (e.g., INV-000001).
+
+### GET /investments/analytics/user/:userId
+Get comprehensive investment analytics for a specific user.
+
+**Parameters:**
+- `userId` (string): User UUID or displayCode (e.g., "USR-000001")
+
+**Response:**
+```json
+{
+  "user": {
+    "id": "uuid...",
+    "displayCode": "USR-000001",
+    "fullName": "John Doe",
+    "email": "john@example.com"
+  },
+  "investments": [
+    {
+      "id": "uuid...",
+      "displayCode": "INV-000001",
+      "tokensPurchased": "2.500000",
+      "amountUSDT": "2500.000000",
+      "status": "active",
+      "paymentStatus": "completed",
+      "expectedROI": "10.00",
+      "property": {
+        "id": "uuid...",
+        "displayCode": "PROP-000001",
+        "title": "Marina View Residences",
+        "organization": {
+          "id": "uuid...",
+          "displayCode": "ORG-000001",
+          "name": "HMR Builders"
+        }
+      },
+      "createdAt": "2025-10-17T14:32:01.123Z"
+    }
+  ],
+  "analytics": {
+    "totalInvestments": 5,
+    "totalAmountUSDT": "12500.000000",
+    "totalTokensPurchased": "12.500000",
+    "averageInvestmentAmount": "2500.000000",
+    "averageTokensPerInvestment": "2.500000",
+    "totalExpectedROI": "50.00",
+    "activeInvestments": 3,
+    "completedInvestments": 2,
+    "pendingInvestments": 0,
+    "totalValueAtCurrentPrice": "12500.000000"
+  }
+}
+```
+
+### GET /investments/analytics/organization/:orgId
+Get comprehensive investment analytics for a specific organization.
+
+**Parameters:**
+- `orgId` (string): Organization UUID or displayCode (e.g., "ORG-000001")
+
+**Response:**
+```json
+{
+  "organization": {
+    "id": "uuid...",
+    "displayCode": "ORG-000001",
+    "name": "HMR Builders"
+  },
+  "investments": [
+    {
+      "id": "uuid...",
+      "displayCode": "INV-000001",
+      "user": {
+        "id": "uuid...",
+        "displayCode": "USR-000001",
+        "fullName": "John Doe",
+        "email": "john@example.com"
+      },
+      "tokensPurchased": "2.500000",
+      "amountUSDT": "2500.000000",
+      "status": "active",
+      "paymentStatus": "completed",
+      "expectedROI": "10.00",
+      "property": {
+        "id": "uuid...",
+        "displayCode": "PROP-000001",
+        "title": "Marina View Residences"
+      },
+      "createdAt": "2025-10-17T14:32:01.123Z"
+    }
+  ],
+  "analytics": {
+    "totalInvestments": 25,
+    "totalAmountUSDT": "125000.000000",
+    "totalTokensPurchased": "125.000000",
+    "averageInvestmentAmount": "5000.000000",
+    "averageTokensPerInvestment": "5.000000",
+    "totalExpectedROI": "250.00",
+    "activeInvestments": 20,
+    "completedInvestments": 5,
+    "pendingInvestments": 0,
+    "totalValueAtCurrentPrice": "125000.000000"
+  }
+}
+```
+
+### GET /investments/analytics/user/:userId/organization/:orgId
+Get comprehensive investment analytics for a specific user within a specific organization.
+
+**Parameters:**
+- `userId` (string): User UUID or displayCode (e.g., "USR-000001")
+- `orgId` (string): Organization UUID or displayCode (e.g., "ORG-000001")
+
+**Response:**
+```json
+{
+  "user": {
+    "id": "uuid...",
+    "displayCode": "USR-000001",
+    "fullName": "John Doe",
+    "email": "john@example.com"
+  },
+  "organization": {
+    "id": "uuid...",
+    "displayCode": "ORG-000001",
+    "name": "HMR Builders"
+  },
+  "investments": [
+    {
+      "id": "uuid...",
+      "displayCode": "INV-000001",
+      "tokensPurchased": "2.500000",
+      "amountUSDT": "2500.000000",
+      "status": "active",
+      "paymentStatus": "completed",
+      "expectedROI": "10.00",
+      "property": {
+        "id": "uuid...",
+        "displayCode": "PROP-000001",
+        "title": "Marina View Residences"
+      },
+      "createdAt": "2025-10-17T14:32:01.123Z"
+    }
+  ],
+  "analytics": {
+    "totalInvestments": 3,
+    "totalAmountUSDT": "7500.000000",
+    "totalTokensPurchased": "7.500000",
+    "averageInvestmentAmount": "2500.000000",
+    "averageTokensPerInvestment": "2.500000",
+    "totalExpectedROI": "30.00",
+    "activeInvestments": 2,
+    "completedInvestments": 1,
+    "pendingInvestments": 0,
+    "totalValueAtCurrentPrice": "7500.000000"
+  }
+}
+```
+
+**Analytics Fields Explained:**
+- `totalInvestments`: Total number of investments
+- `totalAmountUSDT`: Sum of all investment amounts in USDT
+- `totalTokensPurchased`: Sum of all tokens purchased
+- `averageInvestmentAmount`: Average investment amount per investment
+- `averageTokensPerInvestment`: Average tokens per investment
+- `totalExpectedROI`: Sum of all expected ROI percentages
+- `activeInvestments`: Number of investments with "active" status
+- `completedInvestments`: Number of investments with "confirmed" status
+- `pendingInvestments`: Number of investments with "pending" status
+- `totalValueAtCurrentPrice`: Current value of all tokens at current property prices
 
 ---
 

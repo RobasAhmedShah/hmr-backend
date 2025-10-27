@@ -12,6 +12,12 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { InvestDto } from './dto/invest.dto';
 import { InvestmentCompletedEvent } from '../events/investment.events';
+import { 
+  InvestmentAnalyticsDto, 
+  UserInvestmentAnalyticsDto, 
+  OrganizationInvestmentAnalyticsDto, 
+  UserOrganizationInvestmentAnalyticsDto 
+} from './dto/investment-analytics.dto';
 
 @Injectable()
 export class InvestmentsService {
@@ -172,6 +178,30 @@ export class InvestmentsService {
     }
   }
 
+  async findByOrganization(orgIdOrCode: string) {
+    // Check if orgIdOrCode is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgIdOrCode);
+    
+    let organizationId = orgIdOrCode;
+    
+    if (!isUuid) {
+      // It's a display code, find the organization
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { displayCode: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException(`Organization with display code '${orgIdOrCode}' not found`);
+      }
+      organizationId = org.id;
+    }
+    
+    // Use QueryBuilder to join with property table and filter by organizationId
+    return this.investmentRepo
+      .createQueryBuilder('investment')
+      .leftJoinAndSelect('investment.user', 'user')
+      .leftJoinAndSelect('investment.property', 'property')
+      .where('property.organizationId = :organizationId', { organizationId })
+      .getMany();
+  }
+
   async findOne(id: string) {
     return this.investmentRepo.findOne({ where: { id }, relations: ['user', 'property'] });
   }
@@ -185,5 +215,215 @@ export class InvestmentsService {
     } else {
       return this.investmentRepo.findOne({ where: { displayCode: idOrCode }, relations: ['user', 'property'] });
     }
+  }
+
+  async getUserInvestmentAnalytics(userIdOrCode: string): Promise<UserInvestmentAnalyticsDto> {
+    // Check if userIdOrCode is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrCode);
+    
+    let actualUserId = userIdOrCode;
+    let user: User;
+    
+    if (!isUuid) {
+      // It's a display code, find the user first to get their UUID
+      const foundUser = await this.dataSource.getRepository(User).findOne({ where: { displayCode: userIdOrCode } });
+      if (!foundUser) {
+        throw new NotFoundException('User not found');
+      }
+      user = foundUser;
+      actualUserId = user.id;
+    } else {
+      // Fetch user by UUID
+      const foundUser = await this.dataSource.getRepository(User).findOne({ where: { id: userIdOrCode } });
+      if (!foundUser) {
+        throw new NotFoundException('User not found');
+      }
+      user = foundUser;
+    }
+
+    // Get all investments for the user
+    const investments = await this.investmentRepo.find({ 
+      where: { userId: actualUserId }, 
+      relations: ['property', 'property.organization'],
+      order: { createdAt: 'DESC' }
+    });
+
+    // Calculate analytics
+    const analytics = this.calculateInvestmentAnalytics(investments);
+
+    return {
+      user: {
+        id: user.id,
+        displayCode: user.displayCode,
+        fullName: user.fullName,
+        email: user.email
+      },
+      investments,
+      analytics
+    };
+  }
+
+  async getOrganizationInvestmentAnalytics(orgIdOrCode: string): Promise<OrganizationInvestmentAnalyticsDto> {
+    // Check if orgIdOrCode is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgIdOrCode);
+    
+    let organizationId = orgIdOrCode;
+    let organization: Organization;
+    
+    if (!isUuid) {
+      // It's a display code, find the organization
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { displayCode: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException(`Organization with display code '${orgIdOrCode}' not found`);
+      }
+      organization = org;
+      organizationId = org.id;
+    } else {
+      // Fetch organization by UUID
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { id: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException('Organization not found');
+      }
+      organization = org;
+    }
+
+    // Get all investments in properties owned by the organization
+    const investments = await this.investmentRepo
+      .createQueryBuilder('investment')
+      .leftJoinAndSelect('investment.user', 'user')
+      .leftJoinAndSelect('investment.property', 'property')
+      .leftJoinAndSelect('property.organization', 'organization')
+      .where('property.organizationId = :organizationId', { organizationId })
+      .orderBy('investment.createdAt', 'DESC')
+      .getMany();
+
+    // Calculate analytics
+    const analytics = this.calculateInvestmentAnalytics(investments);
+
+    return {
+      organization: {
+        id: organization.id,
+        displayCode: organization.displayCode,
+        name: organization.name
+      },
+      investments,
+      analytics
+    };
+  }
+
+  async getUserOrganizationInvestmentAnalytics(userIdOrCode: string, orgIdOrCode: string): Promise<UserOrganizationInvestmentAnalyticsDto> {
+    // Resolve user ID
+    const isUserIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrCode);
+    let actualUserId = userIdOrCode;
+    let user: User;
+    
+    if (!isUserIdUuid) {
+      const foundUser = await this.dataSource.getRepository(User).findOne({ where: { displayCode: userIdOrCode } });
+      if (!foundUser) {
+        throw new NotFoundException('User not found');
+      }
+      user = foundUser;
+      actualUserId = user.id;
+    } else {
+      const foundUser = await this.dataSource.getRepository(User).findOne({ where: { id: userIdOrCode } });
+      if (!foundUser) {
+        throw new NotFoundException('User not found');
+      }
+      user = foundUser;
+    }
+
+    // Resolve organization ID
+    const isOrgIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgIdOrCode);
+    let organizationId = orgIdOrCode;
+    let organization: Organization;
+    
+    if (!isOrgIdUuid) {
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { displayCode: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException(`Organization with display code '${orgIdOrCode}' not found`);
+      }
+      organization = org;
+      organizationId = org.id;
+    } else {
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { id: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException('Organization not found');
+      }
+      organization = org;
+    }
+
+    // Get investments for the user in the organization's properties
+    const investments = await this.investmentRepo
+      .createQueryBuilder('investment')
+      .leftJoinAndSelect('investment.user', 'user')
+      .leftJoinAndSelect('investment.property', 'property')
+      .leftJoinAndSelect('property.organization', 'organization')
+      .where('investment.userId = :userId', { userId: actualUserId })
+      .andWhere('property.organizationId = :organizationId', { organizationId })
+      .orderBy('investment.createdAt', 'DESC')
+      .getMany();
+
+    // Calculate analytics
+    const analytics = this.calculateInvestmentAnalytics(investments);
+
+    return {
+      user: {
+        id: user.id,
+        displayCode: user.displayCode,
+        fullName: user.fullName,
+        email: user.email
+      },
+      organization: {
+        id: organization.id,
+        displayCode: organization.displayCode,
+        name: organization.name
+      },
+      investments,
+      analytics
+    };
+  }
+
+  private calculateInvestmentAnalytics(investments: any[]): any {
+    if (investments.length === 0) {
+      return {
+        totalInvestments: 0,
+        totalAmountUSDT: '0',
+        totalTokensPurchased: '0',
+        averageInvestmentAmount: '0',
+        averageTokensPerInvestment: '0',
+        totalExpectedROI: '0',
+        activeInvestments: 0,
+        completedInvestments: 0,
+        pendingInvestments: 0,
+        totalValueAtCurrentPrice: '0'
+      };
+    }
+
+    const totalAmountUSDT = investments.reduce((sum, inv) => sum.plus(inv.amountUSDT), new Decimal(0));
+    const totalTokensPurchased = investments.reduce((sum, inv) => sum.plus(inv.tokensPurchased), new Decimal(0));
+    const totalExpectedROI = investments.reduce((sum, inv) => sum.plus(inv.expectedROI), new Decimal(0));
+    
+    const activeInvestments = investments.filter(inv => inv.status === 'active').length;
+    const completedInvestments = investments.filter(inv => inv.status === 'confirmed').length;
+    const pendingInvestments = investments.filter(inv => inv.status === 'pending').length;
+
+    // Calculate total value at current price (sum of tokens * current price per token)
+    const totalValueAtCurrentPrice = investments.reduce((sum, inv) => {
+      const currentValue = inv.tokensPurchased.mul(inv.property.pricePerTokenUSDT);
+      return sum.plus(currentValue);
+    }, new Decimal(0));
+
+    return {
+      totalInvestments: investments.length,
+      totalAmountUSDT: totalAmountUSDT.toString(),
+      totalTokensPurchased: totalTokensPurchased.toString(),
+      averageInvestmentAmount: totalAmountUSDT.div(investments.length).toString(),
+      averageTokensPerInvestment: totalTokensPurchased.div(investments.length).toString(),
+      totalExpectedROI: totalExpectedROI.toString(),
+      activeInvestments,
+      completedInvestments,
+      pendingInvestments,
+      totalValueAtCurrentPrice: totalValueAtCurrentPrice.toString()
+    };
   }
 }

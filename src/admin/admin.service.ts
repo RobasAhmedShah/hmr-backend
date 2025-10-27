@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -7,6 +7,9 @@ import { User } from './entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { KycVerification } from '../kyc/entities/kyc-verification.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { Investment } from '../investments/entities/investment.entity';
+import { Property } from '../properties/entities/property.entity';
 import { UserCreatedEvent } from '../events/user.events';
 
 @Injectable()
@@ -108,6 +111,42 @@ export class AdminService {
       
       return saved;
     });
+  }
+
+  async findInvestorsByOrganization(orgIdOrCode: string) {
+    // Check if orgIdOrCode is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgIdOrCode);
+    
+    let organizationId = orgIdOrCode;
+    
+    if (!isUuid) {
+      // It's a display code, find the organization
+      const org = await this.dataSource.getRepository(Organization).findOne({ where: { displayCode: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException(`Organization with display code '${orgIdOrCode}' not found`);
+      }
+      organizationId = org.id;
+    }
+    
+    // Use QueryBuilder to find distinct users who have investments in properties owned by the organization
+    return this.dataSource
+      .createQueryBuilder(User, 'user')
+      .distinct(true)
+      .leftJoin(Investment, 'investment', 'investment.userId = user.id')
+      .leftJoin(Property, 'property', 'property.id = investment.propertyId')
+      .where('property.organizationId = :organizationId', { organizationId })
+      .select([
+        'user.id',
+        'user.displayCode',
+        'user.fullName',
+        'user.email',
+        'user.phone',
+        'user.role',
+        'user.isActive',
+        'user.createdAt',
+        'user.updatedAt'
+      ])
+      .getMany();
   }
 }
 

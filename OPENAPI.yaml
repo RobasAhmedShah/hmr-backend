@@ -144,6 +144,14 @@ paths:
       tags:
         - Users (Admin)
       summary: List all users
+      description: Get all users, optionally filtering by organization to show only investors in that organization's properties.
+      parameters:
+        - name: org
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter users by organization UUID or displayCode (e.g., ORG-000001). Returns only users who have invested in that organization's properties.
       responses:
         '200':
           description: A list of all users.
@@ -226,6 +234,12 @@ paths:
           schema:
             type: string
           description: Filter properties by displayCode (e.g., PROP-000001).
+        - name: org
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter properties by organization UUID or displayCode (e.g., ORG-000001).
       responses:
         '200':
           description: A list of properties.
@@ -472,6 +486,12 @@ paths:
           schema:
             type: string
           description: Filter investments by user UUID or displayCode.
+        - name: org
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter investments by organization UUID or displayCode (e.g., ORG-000001).
       responses:
         '200':
           description: A list of investments.
@@ -540,6 +560,81 @@ paths:
                 $ref: '#/components/schemas/Investment'
         '404':
           description: Investment not found.
+
+  /investments/analytics/user/{userId}:
+    get:
+      tags:
+        - Investments
+      summary: Get user investment analytics
+      description: Get comprehensive investment analytics for a specific user including detailed investment list and sum analytics.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user (e.g., USR-000001).
+      responses:
+        '200':
+          description: User investment analytics with detailed breakdown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInvestmentAnalytics'
+        '404':
+          description: User not found.
+
+  /investments/analytics/organization/{orgId}:
+    get:
+      tags:
+        - Investments
+      summary: Get organization investment analytics
+      description: Get comprehensive investment analytics for a specific organization including all investments in their properties and sum analytics.
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the organization (e.g., ORG-000001).
+      responses:
+        '200':
+          description: Organization investment analytics with detailed breakdown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInvestmentAnalytics'
+        '404':
+          description: Organization not found.
+
+  /investments/analytics/user/{userId}/organization/{orgId}:
+    get:
+      tags:
+        - Investments
+      summary: Get user-organization investment analytics
+      description: Get comprehensive investment analytics for a specific user within a specific organization including detailed investment list and sum analytics.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the user (e.g., USR-000001).
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID or displayCode of the organization (e.g., ORG-000001).
+      responses:
+        '200':
+          description: User-organization investment analytics with detailed breakdown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOrganizationInvestmentAnalytics'
+        '404':
+          description: User or organization not found.
 
   # ----------------------------------------------
   # Portfolio
@@ -2562,3 +2657,142 @@ components:
                 transactions:
                   type: number
                   format: double
+
+    # ----------------------------------------------
+    # INVESTMENT ANALYTICS
+    # ----------------------------------------------
+    InvestmentAnalytics:
+      type: object
+      properties:
+        totalInvestments:
+          type: integer
+          description: Total number of investments
+          example: 5
+        totalAmountUSDT:
+          type: string
+          format: decimal
+          description: Sum of all investment amounts in USDT
+          example: "12500.000000"
+        totalTokensPurchased:
+          type: string
+          format: decimal
+          description: Sum of all tokens purchased
+          example: "12.500000"
+        averageInvestmentAmount:
+          type: string
+          format: decimal
+          description: Average investment amount per investment
+          example: "2500.000000"
+        averageTokensPerInvestment:
+          type: string
+          format: decimal
+          description: Average tokens per investment
+          example: "2.500000"
+        totalExpectedROI:
+          type: string
+          format: decimal
+          description: Sum of all expected ROI percentages
+          example: "50.00"
+        activeInvestments:
+          type: integer
+          description: Number of investments with active status
+          example: 3
+        completedInvestments:
+          type: integer
+          description: Number of investments with confirmed status
+          example: 2
+        pendingInvestments:
+          type: integer
+          description: Number of investments with pending status
+          example: 0
+        totalValueAtCurrentPrice:
+          type: string
+          format: decimal
+          description: Current value of all tokens at current property prices
+          example: "12500.000000"
+
+    UserInvestmentAnalytics:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayCode:
+              type: string
+              example: USR-000001
+            fullName:
+              type: string
+              example: John Doe
+            email:
+              type: string
+              format: email
+              example: john@example.com
+        investments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Investment'
+        analytics:
+          $ref: '#/components/schemas/InvestmentAnalytics'
+
+    OrganizationInvestmentAnalytics:
+      type: object
+      properties:
+        organization:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayCode:
+              type: string
+              example: ORG-000001
+            name:
+              type: string
+              example: HMR Builders
+        investments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Investment'
+        analytics:
+          $ref: '#/components/schemas/InvestmentAnalytics'
+
+    UserOrganizationInvestmentAnalytics:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayCode:
+              type: string
+              example: USR-000001
+            fullName:
+              type: string
+              example: John Doe
+            email:
+              type: string
+              format: email
+              example: john@example.com
+        organization:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayCode:
+              type: string
+              example: ORG-000001
+            name:
+              type: string
+              example: HMR Builders
+        investments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Investment'
+        analytics:
+          $ref: '#/components/schemas/InvestmentAnalytics'

@@ -57,6 +57,27 @@ export class PropertiesService {
     return this.propertyRepo.find({ relations: ['organization'] });
   }
 
+  async findByOrganization(orgIdOrCode: string) {
+    // Check if orgIdOrCode is UUID or displayCode
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgIdOrCode);
+    
+    let organizationId = orgIdOrCode;
+    
+    if (!isUuid) {
+      // It's a display code, find the organization
+      const org = await this.orgRepo.findOne({ where: { displayCode: orgIdOrCode } });
+      if (!org) {
+        throw new NotFoundException(`Organization with display code '${orgIdOrCode}' not found`);
+      }
+      organizationId = org.id;
+    }
+    
+    return this.propertyRepo.find({ 
+      where: { organizationId }, 
+      relations: ['organization'] 
+    });
+  }
+
   async findOne(id: string) {
     return this.propertyRepo.findOne({ where: { id }, relations: ['organization'] });
   }
