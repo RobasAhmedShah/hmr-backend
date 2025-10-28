@@ -59,6 +59,36 @@ $ npm run test:cov
 
 ## Deployment
 
+## Organization Admin Management (New)
+
+The platform admin can create organizations along with an organization admin account, list/update/delete organizations, reset org admin passwords, and org admins can login and change their password (no JWT layer included here).
+
+### Admin Endpoints
+- POST `/admin/organizations` – create org + admin
+- GET `/admin/organizations` – list orgs with admin summary
+- PATCH `/admin/organizations/:id` – update org
+- DELETE `/admin/organizations/:id` – delete org
+- POST `/admin/organizations/:id/reset-password` – reset org admin password
+
+Example create body:
+```json
+{
+  "name": "Hazara Builders",
+  "description": "Leading construction company",
+  "website": "https://hazarabuilders.com",
+  "logoUrl": "https://example.com/logo.png",
+  "adminEmail": "admin@hazara.com",
+  "adminPassword": "admin123",
+  "adminFullName": "Hazara Administrator"
+}
+```
+
+### Org Admin Endpoints
+- POST `/org/auth/login` – body `{ email, password }`
+- PATCH `/org/auth/change-password/:adminId` – body `{ currentPassword, newPassword }`
+
+See OPENAPI.yaml and API_ENDPOINTS.md for full schemas and examples.
+
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
