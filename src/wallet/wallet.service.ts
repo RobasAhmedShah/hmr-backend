@@ -135,6 +135,73 @@ export class WalletService {
     }
   }
 
+  async processDepositSynchronously(dto: {
+    userId: string;
+    userDisplayCode: string;
+    amountUSDT: Decimal;
+    methodId: string;
+    methodType: 'card' | 'bank' | 'crypto';
+    provider: string;
+  }) {
+    return this.dataSource.transaction(async (manager) => {
+      const wallets = manager.getRepository(Wallet);
+      const transactions = manager.getRepository(Transaction);
+      const users = manager.getRepository(User);
+
+      // Get user and wallet
+      const user = await users.findOne({ where: { id: dto.userId } });
+      if (!user) throw new Error('User not found');
+
+      const wallet = await wallets.findOne({ where: { userId: dto.userId } });
+      if (!wallet) throw new Error('Wallet not found');
+
+      // Update wallet balance
+      wallet.balanceUSDT = (wallet.balanceUSDT as Decimal).plus(dto.amountUSDT);
+      wallet.totalDepositedUSDT = (wallet.totalDepositedUSDT as Decimal).plus(dto.amountUSDT);
+      await wallets.save(wallet);
+
+      // Generate displayCode for transaction
+      const txnResult = await transactions.query('SELECT nextval(\'transaction_display_seq\') as nextval');
+      const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
+
+      const txn = transactions.create({
+        userId: dto.userId,
+        walletId: wallet.id,
+        paymentMethodId: dto.methodId,
+        type: 'deposit',
+        amountUSDT: dto.amountUSDT,
+        status: 'completed',
+        description: `Deposit via ${dto.provider} ${dto.methodType}`,
+        displayCode: txnDisplayCode,
+      });
+      const savedTxn = await transactions.save(txn);
+
+      // Emit wallet funded event for audit/logging
+      const walletFundedEvent: WalletFundedEvent = {
+        eventId: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
+        userId: dto.userId,
+        userDisplayCode: dto.userDisplayCode,
+        amountUSDT: dto.amountUSDT,
+        transactionId: savedTxn.id,
+        transactionDisplayCode: txnDisplayCode,
+        methodId: dto.methodId,
+        methodType: dto.methodType,
+        provider: dto.provider,
+      };
+
+      try {
+        this.eventEmitter.emit('wallet.funded', walletFundedEvent);
+        this.logger.log(`Wallet funded event emitted for user ${dto.userDisplayCode}`);
+      } catch (error) {
+        this.logger.error('Failed to emit wallet funded event:', error);
+        // Don't throw - let the main operation continue
+      }
+
+      return { wallet, transaction: savedTxn };
+    });
+  }
+
   /**
    * Process deposit in transaction
    */

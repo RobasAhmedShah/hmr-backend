@@ -11,6 +11,7 @@ import { VerifyPaymentMethodDto } from './dto/verify-payment-method.dto';
 import { DepositWithPaymentDto } from './dto/deposit-with-payment.dto';
 import { SetDefaultPaymentDto } from './dto/set-default-payment.dto';
 import { PaymentMethodCreatedEvent, PaymentMethodVerifiedEvent, WalletDepositInitiatedEvent, WalletFundedEvent } from '../events/payment.events';
+import { WalletService } from '../wallet/wallet.service';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -24,6 +25,7 @@ export class PaymentMethodsService {
     @InjectRepository(CardDetails)
     private readonly cardDetailsRepo: Repository<CardDetails>,
     private readonly eventEmitter: EventEmitter2, // Event-driven architecture
+    private readonly walletService: WalletService, // For synchronous deposit processing
   ) {}
 
   async create(dto: CreatePaymentMethodDto) {
@@ -285,27 +287,19 @@ export class PaymentMethodsService {
 
       const amount = new Decimal(dto.amountUSDT);
 
-      // Emit wallet deposit initiated event
-      const walletDepositInitiatedEvent: WalletDepositInitiatedEvent = {
-        eventId: `wdi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: new Date(),
+      // Process deposit synchronously and wait for completion
+      const result = await this.walletService.processDepositSynchronously({
         userId: actualUserId,
         userDisplayCode: user.displayCode,
         amountUSDT: amount,
         methodId: paymentMethod.id,
         methodType: paymentMethod.type,
         provider: paymentMethod.provider,
-      };
+      });
 
-      try {
-        this.eventEmitter.emit('wallet.deposit_initiated', walletDepositInitiatedEvent);
-        this.logger.log(`Wallet deposit initiated event emitted for user ${user.displayCode}`);
-      } catch (error) {
-        this.logger.error('Failed to emit wallet deposit initiated event:', error);
-        // Don't throw - let the main operation continue
-      }
+      this.logger.log(`Wallet deposit processed successfully for user ${user.displayCode}`);
 
-      return { message: 'Deposit initiated successfully', amount: amount.toString() };
+      return result;
     });
   }
 }
