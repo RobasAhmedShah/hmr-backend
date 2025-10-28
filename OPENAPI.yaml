@@ -180,6 +180,152 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
 
+  /admin/organizations:
+    get:
+      tags: [Organizations (Admin Management)]
+      summary: List organizations with admin summaries
+      responses:
+        '200':
+          description: A list of organizations with admin summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationWithAdminSummary'
+    post:
+      tags: [Organizations (Admin Management)]
+      summary: Create organization with admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateOrganization'
+      responses:
+        '201':
+          description: Organization and admin created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCreateOrganizationResponse'
+
+  /admin/organizations/{id}:
+    patch:
+      tags: [Organizations (Admin Management)]
+      summary: Update organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateOrganization'
+      responses:
+        '200':
+          description: Updated organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+    delete:
+      tags: [Organizations (Admin Management)]
+      summary: Delete organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /admin/organizations/{id}/reset-password:
+    post:
+      tags: [Organizations (Admin Management)]
+      summary: Reset organization admin password
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Reset result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordResponse'
+
+  /org/auth/login:
+    post:
+      tags: [Organization Admin Auth]
+      summary: Organization admin login (no JWT returned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgAdminLoginResponse'
+
+  /org/auth/change-password/{adminId}:
+    patch:
+      tags: [Organization Admin Auth]
+      summary: Change organization admin password
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        '200':
+          description: Change password result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
   # ----------------------------------------------
   # Users (Direct Management)
   # ----------------------------------------------
@@ -1157,6 +1303,68 @@ paths:
 # ----------------------------------------------
 components:
   schemas:
+    OrganizationWithAdminSummary:
+      allOf:
+        - $ref: '#/components/schemas/Organization'
+        - type: object
+          properties:
+            admin:
+              type: object
+              nullable: true
+              properties:
+                email: { type: string }
+                fullName: { type: string, nullable: true }
+                lastLogin: { type: string, format: date-time, nullable: true }
+
+    AdminCreateOrganization:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        logoUrl: { type: string, nullable: true }
+        adminEmail: { type: string, format: email, nullable: true }
+        adminPassword: { type: string, nullable: true }
+        adminFullName: { type: string, nullable: true }
+      required: [name]
+
+    AdminUpdateOrganization:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        logoUrl: { type: string, nullable: true }
+
+    AdminCreateOrganizationResponse:
+      type: object
+      properties:
+        organization:
+          $ref: '#/components/schemas/Organization'
+        admin:
+          type: object
+          properties:
+            email: { type: string }
+            tempPassword: { type: string }
+            fullName: { type: string, nullable: true }
+        message: { type: string }
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        email: { type: string }
+        tempPassword: { type: string }
+
+    OrgAdminLoginResponse:
+      type: object
+      properties:
+        organizationId: { type: string }
+        admin:
+          type: object
+          properties:
+            id: { type: string }
+            email: { type: string }
+            fullName: { type: string, nullable: true }
     # ----------------------------------------------
     # ENTITIES
     # ----------------------------------------------

@@ -65,6 +65,77 @@ Get all transactions for an organization (with entity traceability).
 
 ---
 
+## 1.1. Organizations (Admin Management)
+
+These endpoints are under the admin namespace for platform admins.
+
+### POST /admin/organizations
+Create an organization along with its organization admin (no auth layer, returns temp password once).
+
+**Body:**
+```json
+{
+  "name": "Hazara Builders",
+  "description": "Leading construction company",
+  "website": "https://hazarabuilders.com",
+  "logoUrl": "https://example.com/logo.png",
+  "adminEmail": "admin@hazara.com",
+  "adminPassword": "admin123",
+  "adminFullName": "Hazara Administrator"
+}
+```
+
+**Response:**
+```json
+{
+  "organization": { "id": "uuid...", "displayCode": "ORG-000003", "name": "Hazara Builders", "website": "https://hazarabuilders.com" },
+  "admin": { "email": "admin@hazara.com", "tempPassword": "admin123", "fullName": "Hazara Administrator" },
+  "message": "Organization created successfully. Admin credentials: admin@hazara.com / admin123"
+}
+```
+
+### GET /admin/organizations
+List organizations with admin summaries.
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid...",
+    "displayCode": "ORG-000001",
+    "name": "HMR Builders",
+    "website": "https://hmrbuilders.com",
+    "admin": { "email": "admin@hmrbuilders.com", "fullName": "HMR Administrator", "lastLogin": null }
+  }
+]
+```
+
+### PATCH /admin/organizations/:id
+Update organization fields (name, description, website, logoUrl).
+
+**Body (any subset):**
+```json
+{ "name": "Updated Name", "description": "Updated", "website": "https://updated.com", "logoUrl": "https://logo.png" }
+```
+
+### DELETE /admin/organizations/:id
+Delete an organization (org admin is removed via cascade).
+
+### POST /admin/organizations/:id/reset-password
+Reset the organization admin password.
+
+**Body (optional):**
+```json
+{ "newPassword": "TempPass789!" }
+```
+
+**Response:**
+```json
+{ "email": "admin@hazara.com", "tempPassword": "TempPass789!" }
+```
+
+---
+
 ## 2. Users (Admin)
 
 ### POST /admin/users

@@ -14,6 +14,7 @@ import { TransactionsModule } from './transactions';
 import { InvestmentsModule } from './investments';
 import { RewardsModule } from './rewards';
 import { PortfolioModule } from './portfolio';
+import { OrganizationAdminsModule } from './organization-admins/organization-admins.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ListenersModule } from './listeners/listeners.module';
 
@@ -34,7 +35,8 @@ import { ListenersModule } from './listeners/listeners.module';
     InvestmentsModule,
     RewardsModule,
     PortfolioModule,
-    PaymentMethodsModule, // Payment method system
+        PaymentMethodsModule, // Payment method system
+        OrganizationAdminsModule, // Org admin management
     ListenersModule, // Event listeners for cross-service updates
   ],
   controllers: [AppController],

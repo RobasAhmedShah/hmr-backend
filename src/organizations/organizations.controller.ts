@@ -41,5 +41,6 @@ export class OrganizationsController {
     const transactions = await this.organizationsService.findTransactions(id);
     return { success: true, transactions };
   }
+
 }
 
