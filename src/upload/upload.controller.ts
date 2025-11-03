@@ -27,8 +27,18 @@ export class UploadController {
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     fileFilter: (req, file, cb) => {
-      // Accept all files - validation happens in service
-      cb(null, true);
+      try {
+        console.log('FileInterceptor - File filter called:', {
+          fieldname: file?.fieldname,
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+        });
+        // Accept all files - validation happens in service
+        cb(null, true);
+      } catch (error) {
+        console.error('FileInterceptor - Filter error:', error);
+        cb(error as Error, false);
+      }
     },
   }))
   async uploadImage(
@@ -36,7 +46,15 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File
   ) {
     try {
+      console.log('Upload endpoint called:', {
+        category,
+        hasFile: !!file,
+        fileType: typeof file,
+        fileKeys: file ? Object.keys(file) : null,
+      });
+
       if (!file) {
+        console.error('No file received in controller');
         throw new BadRequestException('No file uploaded');
       }
 
@@ -46,6 +64,10 @@ export class UploadController {
         mimetype: file.mimetype,
         size: file.size,
         bufferLength: file.buffer?.length,
+        encoding: file.encoding,
+        destination: file.destination,
+        filename: file.filename,
+        path: file.path,
       });
 
       const result = await this.uploadService.saveFile(file, category, 'image');
@@ -56,7 +78,11 @@ export class UploadController {
         data: result,
       };
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error in controller:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        category,
+      });
       throw error;
     }
   }
