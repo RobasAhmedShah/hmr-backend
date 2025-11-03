@@ -17,6 +17,7 @@ import { PortfolioModule } from './portfolio';
 import { OrganizationAdminsModule } from './organization-admins/organization-admins.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ListenersModule } from './listeners/listeners.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ListenersModule } from './listeners/listeners.module';
         PaymentMethodsModule, // Payment method system
         OrganizationAdminsModule, // Org admin management
     ListenersModule, // Event listeners for cross-service updates
+    UploadModule, // File upload system
   ],
   controllers: [AppController],
   providers: [AppService],

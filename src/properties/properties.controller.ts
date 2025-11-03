@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, Patch, Delete, Query, NotFoundException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, Delete, Query, NotFoundException, HttpCode, HttpStatus, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -52,5 +53,18 @@ export class PropertiesController {
   @HttpCode(HttpStatus.OK)
   remove(@Param('id') id: string) {
     return this.propertiesService.remove(id);
+  }
+
+  /**
+   * Upload images for a property
+   * Use this endpoint after creating a property to add images
+   */
+  @Post(':id/upload-images')
+  @UseInterceptors(FilesInterceptor('images', 10)) // Max 10 images
+  async uploadImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[]
+  ) {
+    return this.propertiesService.uploadImages(id, files);
   }
 }

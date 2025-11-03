@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import Decimal from 'decimal.js';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { OrganizationAdmin } from '../organization-admins/entities/organization-admin.entity';
+import { UploadService } from '../upload/upload.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class OrganizationsService {
     private readonly orgRepo: Repository<Organization>,
     @InjectRepository(OrganizationAdmin)
     private readonly orgAdminRepo: Repository<OrganizationAdmin>,
+    private readonly uploadService: UploadService,
   ) {}
 
   async create(dto: CreateOrganizationDto) {
@@ -149,6 +151,45 @@ export class OrganizationsService {
     });
     
     return org?.transactions || [];
+  }
+
+  /**
+   * Upload logo for an organization
+   * File is saved to: docs/organizations/{filename}
+   * URL is stored in database: organization.logoUrl
+   */
+  async uploadLogo(id: string, file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const org = await this.findByIdOrDisplayCode(id);
+    if (!org) {
+      throw new NotFoundException(`Organization with id or displayCode '${id}' not found`);
+    }
+
+    // Upload file to docs/organizations folder
+    // Returns: { url: '/docs/organizations/filename.jpg', filename, path, fullUrl }
+    const uploadedFile = await this.uploadService.saveFile(file, 'organizations', 'image');
+
+    // Save URL to database in organization.logoUrl field
+    // URL format: /docs/organizations/{timestamp}-{random}.{ext}
+    await this.orgRepo.update(org.id, { 
+      logoUrl: uploadedFile.url // This is saved to DB: /docs/organizations/1234567890-org123.jpg
+    });
+
+    // Return updated organization with logo URL
+    const updatedOrg = await this.findByIdOrDisplayCode(id);
+
+    return {
+      success: true,
+      message: 'Logo uploaded successfully',
+      uploadedFile: {
+        url: uploadedFile.url,
+        filename: uploadedFile.filename,
+      },
+      organization: updatedOrg, // Full organization with logoUrl
+    };
   }
 }
 
