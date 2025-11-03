@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, NotFoundException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 
@@ -40,6 +41,19 @@ export class OrganizationsController {
   async getTransactions(@Param('id') id: string) {
     const transactions = await this.organizationsService.findTransactions(id);
     return { success: true, transactions };
+  }
+
+  /**
+   * Upload logo for an organization
+   * Use this endpoint after creating an organization to add a logo
+   */
+  @Post(':id/upload-logo')
+  @UseInterceptors(FileInterceptor('logo'))
+  async uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    return this.organizationsService.uploadLogo(id, file);
   }
 
 }

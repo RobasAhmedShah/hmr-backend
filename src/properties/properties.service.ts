@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Decimal from 'decimal.js';
@@ -7,6 +7,7 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { UpdatePropertyStatusDto } from './dto/update-property-status.dto';
 import { Organization } from '../organizations/entities/organization.entity';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class PropertiesService {
@@ -15,6 +16,7 @@ export class PropertiesService {
     private readonly propertyRepo: Repository<Property>,
     @InjectRepository(Organization)
     private readonly orgRepo: Repository<Organization>,
+    private readonly uploadService: UploadService,
   ) {}
 
   async create(dto: CreatePropertyDto) {
@@ -177,6 +179,57 @@ export class PropertiesService {
 
     await this.propertyRepo.remove(property);
     return { message: `Property '${property.displayCode}' has been deleted successfully` };
+  }
+
+  /**
+   * Upload images for a property
+   * Files are saved to: docs/properties/{filename}
+   * URLs are stored in database: property.images (JSONB array)
+   */
+  async uploadImages(id: string, files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files provided');
+    }
+
+    const property = await this.findByIdOrDisplayCode(id);
+    if (!property) {
+      throw new NotFoundException(`Property with id or displayCode '${id}' not found`);
+    }
+
+    // Upload files to docs/properties folder
+    // Returns: { url: '/docs/properties/filename.jpg', filename, path, fullUrl }
+    const uploadedFiles = await this.uploadService.saveFiles(files, 'properties', 'image');
+
+    // Get existing images or initialize empty array
+    const existingImages = property.images || [];
+    
+    // Prepare image data for database storage
+    // URL format: /docs/properties/{timestamp}-{random}.{ext}
+    const newImages = uploadedFiles.map(file => ({
+      url: file.url, // This is saved to DB: /docs/properties/1234567890-abc123.jpg
+      filename: file.filename,
+      uploadedAt: new Date().toISOString(),
+    }));
+
+    // Merge with existing images
+    const updatedImages = Array.isArray(existingImages) 
+      ? [...existingImages, ...newImages]
+      : newImages;
+
+    // Save URLs to database in property.images field (JSONB)
+    await this.propertyRepo.update(property.id, { 
+      images: updatedImages 
+    });
+
+    // Return updated property with all images
+    const updatedProperty = await this.findByIdOrDisplayCode(id);
+
+    return {
+      success: true,
+      message: `${files.length} image(s) uploaded successfully`,
+      uploadedFiles: newImages, // URLs that were just saved
+      property: updatedProperty, // Full property with all images
+    };
   }
 }
 
