@@ -5,11 +5,11 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class UploadService {
-  // Resolve docs folder - goes up one level from backend to root, then into docs
-  // Structure: E:\Blocks\docs\ (root level docs folder)
+  // Resolve docs folder - now inside the hmr-backend directory
+  // Structure: E:\Blocks\hmr-backend\docs\ (inside backend folder)
   // Backend is at: E:\Blocks\hmr-backend\
-  // So we need: E:\Blocks\docs\
-  private readonly uploadDir = resolve(process.cwd(), '..', 'docs');
+  // So we need: E:\Blocks\hmr-backend\docs\
+  private readonly uploadDir = join(process.cwd(), 'docs');
   private readonly maxFileSize = 10 * 1024 * 1024; // 10MB
   private readonly allowedImageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
   private readonly allowedDocTypes = ['.pdf', '.doc', '.docx', '.txt'];
@@ -84,21 +84,21 @@ export class UploadService {
     // Write file to disk
     await fs.writeFile(filePath, file.buffer);
 
-    // Return relative URL for database storage
-    // This is the path that will be stored in the database
-    const url = `/docs/${category}/${filename}`;
+    // Return URL for database storage - use the API endpoint path
+    // This is the path that will be stored in the database and can be accessed via the API
+    const url = `/upload/file/${category}/${filename}`;
     
     // Full URL for API access (can be used for serving files)
     // Note: In production, files should be accessed via /upload/file/:category/:filename endpoint
     const apiBaseUrl = process.env.API_BASE_URL || 
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       'http://localhost:3000';
-    const fullUrl = `${apiBaseUrl}/upload/file/${category}/${filename}`;
+    const fullUrl = `${apiBaseUrl}${url}`;
 
     return {
-      url, // Store this in DB: /docs/properties/1234-abc.jpg
+      url, // Store this in DB: /upload/file/properties/1234-abc.jpg
       filename,
-      path: filePath, // Full file system path
+      path: filePath, // Full file system path: hmr-backend/docs/properties/1234-abc.jpg
       fullUrl, // Full accessible URL (optional, for reference)
     };
   }
