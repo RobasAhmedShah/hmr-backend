@@ -6,6 +6,7 @@ import fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import { AppModule } from './app.module';
 import { injectSpeedInsights } from '@vercel/speed-insights';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 
 let cachedApp: NestFastifyApplication | null = null;
@@ -32,6 +33,9 @@ async function createNestApp(): Promise<NestFastifyApplication> {
   );
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  
+  // Add global exception filter for better error logging
+  app.useGlobalFilters(new AllExceptionsFilter());
   
   // Comprehensive CORS configuration for production deployment
   app.enableCors({
