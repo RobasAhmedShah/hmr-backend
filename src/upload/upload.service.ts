@@ -6,10 +6,13 @@ import { randomBytes } from 'crypto';
 @Injectable()
 export class UploadService {
   // Resolve docs folder - now inside the hmr-backend directory
-  // Structure: E:\Blocks\hmr-backend\docs\ (inside backend folder)
+  // On Vercel, we can only write to /tmp, so use that in production
+  // Structure: E:\Blocks\hmr-backend\docs\ (local) or /tmp/docs (Vercel)
   // Backend is at: E:\Blocks\hmr-backend\
-  // So we need: E:\Blocks\hmr-backend\docs\
-  private readonly uploadDir = join(process.cwd(), 'docs');
+  // So we need: E:\Blocks\hmr-backend\docs\ (local) or /tmp/docs (Vercel)
+  private readonly uploadDir = process.env.VERCEL 
+    ? join('/tmp', 'docs') 
+    : join(process.cwd(), 'docs');
   private readonly maxFileSize = 10 * 1024 * 1024; // 10MB
   private readonly allowedImageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
   private readonly allowedDocTypes = ['.pdf', '.doc', '.docx', '.txt'];
@@ -72,17 +75,34 @@ export class UploadService {
     category: 'properties' | 'organizations' | 'kyc',
     type: 'image' | 'document' = 'image'
   ): Promise<{ url: string; filename: string; path: string; fullUrl: string }> {
-    this.validateFile(file, type);
+    try {
+      this.validateFile(file, type);
 
-    const filename = this.generateFilename(file.originalname);
-    const categoryDir = join(this.uploadDir, category);
-    const filePath = join(categoryDir, filename);
+      const filename = this.generateFilename(file.originalname);
+      const categoryDir = join(this.uploadDir, category);
+      const filePath = join(categoryDir, filename);
 
-    // Ensure category directory exists
-    await fs.mkdir(categoryDir, { recursive: true });
+      console.log('Saving file:', {
+        filename,
+        categoryDir,
+        filePath,
+        uploadDir: this.uploadDir,
+        isVercel: !!process.env.VERCEL,
+        bufferLength: file.buffer?.length,
+      });
 
-    // Write file to disk
-    await fs.writeFile(filePath, file.buffer);
+      // Ensure category directory exists
+      await fs.mkdir(categoryDir, { recursive: true });
+
+      // Ensure buffer exists
+      if (!file.buffer) {
+        throw new BadRequestException('File buffer is empty');
+      }
+
+      // Write file to disk
+      await fs.writeFile(filePath, file.buffer);
+      
+      console.log('File saved successfully:', filePath);
 
     // Return URL for database storage - use the API endpoint path
     // This is the path that will be stored in the database and can be accessed via the API
@@ -95,12 +115,16 @@ export class UploadService {
       'http://localhost:3000';
     const fullUrl = `${apiBaseUrl}${url}`;
 
-    return {
-      url, // Store this in DB: /upload/file/properties/1234-abc.jpg
-      filename,
-      path: filePath, // Full file system path: hmr-backend/docs/properties/1234-abc.jpg
-      fullUrl, // Full accessible URL (optional, for reference)
-    };
+      return {
+        url, // Store this in DB: /upload/file/properties/1234-abc.jpg
+        filename,
+        path: filePath, // Full file system path: hmr-backend/docs/properties/1234-abc.jpg
+        fullUrl, // Full accessible URL (optional, for reference)
+      };
+    } catch (error) {
+      console.error('Error saving file:', error);
+      throw new BadRequestException(`Failed to save file: ${error.message}`);
+    }
   }
 
   /**
@@ -140,8 +164,10 @@ export class UploadService {
     const filePath = join(this.uploadDir, category, filename);
     
     try {
+      console.log('Reading file:', filePath);
       return await fs.readFile(filePath);
     } catch (error) {
+      console.error('Error reading file:', error);
       throw new BadRequestException('File not found');
     }
   }
