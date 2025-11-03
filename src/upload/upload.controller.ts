@@ -8,7 +8,7 @@ import {
   Res,
   StreamableFile,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import type { Response } from 'express';
 import { UploadService } from './upload.service';
 import { extname } from 'path';
@@ -108,13 +108,15 @@ export class UploadController {
       const files: Express.Multer.File[] = [];
       
       for await (const part of request.parts()) {
-        if (part.type === 'file' && part.file) {
-          const buffer = await part.file.toBuffer();
+        if (part.type === 'file') {
+          // When part.type === 'file', the part itself is the file object
+          const filePart = part as any; // Fastify multipart file part
+          const buffer = await filePart.toBuffer();
           files.push({
-            fieldname: part.fieldname,
-            originalname: part.file.filename || 'upload',
-            encoding: part.file.encoding,
-            mimetype: part.file.mimetype || 'application/octet-stream',
+            fieldname: filePart.fieldname,
+            originalname: filePart.filename || 'upload',
+            encoding: filePart.encoding,
+            mimetype: filePart.mimetype || 'application/octet-stream',
             buffer: buffer,
             size: buffer.length,
             destination: '',
