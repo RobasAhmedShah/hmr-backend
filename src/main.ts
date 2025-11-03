@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import fastify from 'fastify';
+import multipart from '@fastify/multipart';
 import { AppModule } from './app.module';
 import { injectSpeedInsights } from '@vercel/speed-insights';
 
@@ -13,6 +14,14 @@ async function createNestApp(): Promise<NestFastifyApplication> {
   if (cachedApp) return cachedApp;
 
   const fastifyInstance = fastify({ logger: false });
+
+  // Register multipart plugin for file uploads
+  // This is required for Express interceptors to work with Fastify
+  await fastifyInstance.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+  });
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,

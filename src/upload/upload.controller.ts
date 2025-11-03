@@ -21,9 +21,16 @@ export class UploadController {
 
   /**
    * Upload single image
+   * Note: Fastify adapter supports Express interceptors, but we handle multipart manually for compatibility
    */
   @Post('image/:category')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+      // Accept all files - validation happens in service
+      cb(null, true);
+    },
+  }))
   async uploadImage(
     @Param('category') category: 'properties' | 'organizations' | 'kyc',
     @UploadedFile() file: Express.Multer.File
