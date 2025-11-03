@@ -35,17 +35,30 @@ export class UploadController {
     @Param('category') category: 'properties' | 'organizations' | 'kyc',
     @UploadedFile() file: Express.Multer.File
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    const result = await this.uploadService.saveFile(file, category, 'image');
-    
-    return {
-      success: true,
-      message: 'Image uploaded successfully',
-      data: result,
-    };
+      console.log('File received:', {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        bufferLength: file.buffer?.length,
+      });
+
+      const result = await this.uploadService.saveFile(file, category, 'image');
+      
+      return {
+        success: true,
+        message: 'Image uploaded successfully',
+        data: result,
+      };
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
   }
 
   /**
