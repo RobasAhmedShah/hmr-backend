@@ -3,14 +3,12 @@ import {
   Post,
   Get,
   Param,
-  UseInterceptors,
-  UploadedFile,
-  UploadedFiles,
+  Req,
   BadRequestException,
   Res,
   StreamableFile,
 } from '@nestjs/common';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FastifyRequest } from 'fastify';
 import type { Response } from 'express';
 import { UploadService } from './upload.service';
 import { extname } from 'path';
@@ -21,56 +19,62 @@ export class UploadController {
 
   /**
    * Upload single image
-   * Note: Fastify adapter supports Express interceptors, but we handle multipart manually for compatibility
+   * Using Fastify's native multipart handling instead of Express multer
    */
   @Post('image/:category')
-  @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-    fileFilter: (req, file, cb) => {
-      try {
-        console.log('FileInterceptor - File filter called:', {
-          fieldname: file?.fieldname,
-          originalname: file?.originalname,
-          mimetype: file?.mimetype,
-        });
-        // Accept all files - validation happens in service
-        cb(null, true);
-      } catch (error) {
-        console.error('FileInterceptor - Filter error:', error);
-        cb(error as Error, false);
-      }
-    },
-  }))
   async uploadImage(
     @Param('category') category: 'properties' | 'organizations' | 'kyc',
-    @UploadedFile() file: Express.Multer.File
+    @Req() request: FastifyRequest
   ) {
     try {
       console.log('Upload endpoint called:', {
         category,
-        hasFile: !!file,
-        fileType: typeof file,
-        fileKeys: file ? Object.keys(file) : null,
+        isMultipart: request.isMultipart(),
+        contentType: request.headers['content-type'],
       });
 
-      if (!file) {
-        console.error('No file received in controller');
+      if (!request.isMultipart()) {
+        throw new BadRequestException('Request is not multipart/form-data');
+      }
+
+      const data = await request.file();
+      
+      if (!data) {
         throw new BadRequestException('No file uploaded');
       }
 
-      console.log('File received:', {
-        fieldname: file.fieldname,
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        bufferLength: file.buffer?.length,
-        encoding: file.encoding,
-        destination: file.destination,
-        filename: file.filename,
-        path: file.path,
+      console.log('File received from Fastify multipart:', {
+        fieldname: data.fieldname,
+        filename: data.filename,
+        mimetype: data.mimetype,
+        encoding: data.encoding,
       });
 
-      const result = await this.uploadService.saveFile(file, category, 'image');
+      // Read file buffer
+      const buffer = await data.toBuffer();
+
+      // Convert Fastify multipart file to Multer-like format for service
+      const multerLikeFile: Express.Multer.File = {
+        fieldname: data.fieldname,
+        originalname: data.filename || 'upload',
+        encoding: data.encoding,
+        mimetype: data.mimetype || 'application/octet-stream',
+        buffer: buffer,
+        size: buffer.length,
+        destination: '',
+        filename: '',
+        path: '',
+        stream: null as any,
+      };
+
+      console.log('Converted file info:', {
+        originalname: multerLikeFile.originalname,
+        mimetype: multerLikeFile.mimetype,
+        size: multerLikeFile.size,
+        bufferLength: multerLikeFile.buffer.length,
+      });
+
+      const result = await this.uploadService.saveFile(multerLikeFile, category, 'image');
       
       return {
         success: true,
@@ -89,46 +93,101 @@ export class UploadController {
 
   /**
    * Upload multiple images
+   * Using Fastify's native multipart handling
    */
   @Post('images/:category')
-  @UseInterceptors(FilesInterceptor('files', 10)) // Max 10 files
   async uploadImages(
     @Param('category') category: 'properties' | 'organizations' | 'kyc',
-    @UploadedFiles() files: Express.Multer.File[]
+    @Req() request: FastifyRequest
   ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('No files uploaded');
-    }
+    try {
+      if (!request.isMultipart()) {
+        throw new BadRequestException('Request is not multipart/form-data');
+      }
 
-    const results = await this.uploadService.saveFiles(files, category, 'image');
-    
-    return {
-      success: true,
-      message: `${files.length} image(s) uploaded successfully`,
-      data: results,
-    };
+      const files: Express.Multer.File[] = [];
+      
+      for await (const part of request.parts()) {
+        if (part.type === 'file' && part.file) {
+          const buffer = await part.file.toBuffer();
+          files.push({
+            fieldname: part.fieldname,
+            originalname: part.file.filename || 'upload',
+            encoding: part.file.encoding,
+            mimetype: part.file.mimetype || 'application/octet-stream',
+            buffer: buffer,
+            size: buffer.length,
+            destination: '',
+            filename: '',
+            path: '',
+            stream: null as any,
+          });
+        }
+      }
+
+      if (files.length === 0) {
+        throw new BadRequestException('No files uploaded');
+      }
+
+      const results = await this.uploadService.saveFiles(files, category, 'image');
+      
+      return {
+        success: true,
+        message: `${files.length} image(s) uploaded successfully`,
+        data: results,
+      };
+    } catch (error) {
+      console.error('Upload images error:', error);
+      throw error;
+    }
   }
 
   /**
    * Upload single document
+   * Using Fastify's native multipart handling
    */
   @Post('document/:category')
-  @UseInterceptors(FileInterceptor('file'))
   async uploadDocument(
     @Param('category') category: 'properties' | 'organizations' | 'kyc',
-    @UploadedFile() file: Express.Multer.File
+    @Req() request: FastifyRequest
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!request.isMultipart()) {
+        throw new BadRequestException('Request is not multipart/form-data');
+      }
 
-    const result = await this.uploadService.saveFile(file, category, 'document');
-    
-    return {
-      success: true,
-      message: 'Document uploaded successfully',
-      data: result,
-    };
+      const data = await request.file();
+      
+      if (!data) {
+        throw new BadRequestException('No file uploaded');
+      }
+
+      const buffer = await data.toBuffer();
+
+      const multerLikeFile: Express.Multer.File = {
+        fieldname: data.fieldname,
+        originalname: data.filename || 'upload',
+        encoding: data.encoding,
+        mimetype: data.mimetype || 'application/octet-stream',
+        buffer: buffer,
+        size: buffer.length,
+        destination: '',
+        filename: '',
+        path: '',
+        stream: null as any,
+      };
+
+      const result = await this.uploadService.saveFile(multerLikeFile, category, 'document');
+      
+      return {
+        success: true,
+        message: 'Document uploaded successfully',
+        data: result,
+      };
+    } catch (error) {
+      console.error('Upload document error:', error);
+      throw error;
+    }
   }
 
   /**
