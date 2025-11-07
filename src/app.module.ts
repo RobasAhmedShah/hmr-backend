@@ -18,6 +18,7 @@ import { OrganizationAdminsModule } from './organization-admins/organization-adm
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ListenersModule } from './listeners/listeners.module';
 import { UploadModule } from './upload/upload.module';
+import { ChatbotDatabaseModule } from './chatbot-database/chatbot-database.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { UploadModule } from './upload/upload.module';
         OrganizationAdminsModule, // Org admin management
     ListenersModule, // Event listeners for cross-service updates
     UploadModule, // File upload system
+    ChatbotDatabaseModule, // Chatbot database query endpoints for AI tool calling
   ],
   controllers: [AppController],
   providers: [AppService],
