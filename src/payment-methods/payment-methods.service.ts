@@ -64,12 +64,12 @@ export class PaymentMethodsService {
         );
       }
 
-      // Create payment method
+      // Create payment method - automatically verified for instant use
       const paymentMethod = manager.create(PaymentMethod, {
         userId: actualUserId,
         type: dto.type,
         provider: dto.provider,
-        status: 'pending',
+        status: 'verified', // Automatically verified - no verification step needed
         isDefault: dto.isDefault || false,
       });
 
@@ -249,40 +249,24 @@ export class PaymentMethodsService {
         throw new BadRequestException('User must have verified KYC to make deposits');
       }
 
-      let paymentMethod: PaymentMethod | null;
+      let paymentMethod: PaymentMethod | null = null;
+      let methodId: string | undefined = undefined;
+      let methodType: 'card' | 'bank' | 'crypto' | undefined = undefined;
+      let provider: string | undefined = undefined;
 
-      // If methodId is provided, use it; otherwise, find the user's default payment method
+      // Payment method is optional - if provided, use it; otherwise deposit without saved payment method
       if (dto.methodId) {
         paymentMethod = await manager.findOne(PaymentMethod, { where: { id: dto.methodId } });
         if (!paymentMethod) throw new NotFoundException('Payment method not found');
-      } else {
-        // Find user's default payment method (marked as isDefault = true)
-        paymentMethod = await manager.findOne(PaymentMethod, { 
-          where: { 
-            userId: actualUserId, 
-            status: 'verified',
-            isDefault: true
-          }
-        });
         
-        // If no default payment method found, use the first verified payment method
-        if (!paymentMethod) {
-          paymentMethod = await manager.findOne(PaymentMethod, { 
-            where: { 
-              userId: actualUserId, 
-              status: 'verified' 
-            },
-            order: { createdAt: 'ASC' } // Use the oldest verified payment method as fallback
-          });
+        // If payment method is provided, it should be verified
+        if (paymentMethod.status !== 'verified') {
+          throw new BadRequestException('Payment method must be verified to use for deposits');
         }
         
-        if (!paymentMethod) {
-          throw new BadRequestException('No verified payment method found. Please add and verify a payment method first.');
-        }
-      }
-
-      if (paymentMethod.status !== 'verified') {
-        throw new BadRequestException('Payment method must be verified to use for deposits');
+        methodId = paymentMethod.id;
+        methodType = paymentMethod.type as 'card' | 'bank' | 'crypto';
+        provider = paymentMethod.provider;
       }
 
       const amount = new Decimal(dto.amountUSDT);
@@ -292,9 +276,9 @@ export class PaymentMethodsService {
         userId: actualUserId,
         userDisplayCode: user.displayCode,
         amountUSDT: amount,
-        methodId: paymentMethod.id,
-        methodType: paymentMethod.type,
-        provider: paymentMethod.provider,
+        methodId: methodId,
+        methodType: methodType,
+        provider: provider,
       });
 
       this.logger.log(`Wallet deposit processed successfully for user ${user.displayCode}`);

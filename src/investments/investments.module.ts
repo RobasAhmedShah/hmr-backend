@@ -16,6 +16,7 @@ import { Organization } from '../organizations/entities/organization.entity';
   ],
   controllers: [InvestmentsController],
   providers: [InvestmentsService],
+  exports: [InvestmentsService], // Export for use in MobileInvestmentsModule
 })
 export class InvestmentsModule {}
 

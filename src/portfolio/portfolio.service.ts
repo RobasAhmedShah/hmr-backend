@@ -81,7 +81,10 @@ export class PortfolioService {
 
     // Calculate detailed investment data
     const investmentDetails = investments.map(investment => {
-      const currentValue = (investment.tokensPurchased as Decimal).mul(investment.property.pricePerTokenUSDT as Decimal);
+      // Calculate current value with 15% growth (matching mobile app calculation)
+      // Mobile app expects: currentValue = tokensPurchased × property.tokenPrice × 1.15
+      const baseValue = (investment.tokensPurchased as Decimal).mul(investment.property.pricePerTokenUSDT as Decimal);
+      const currentValue = baseValue.mul(1.15); // Apply 15% growth multiplier
       const totalRewards = rewards
         .filter(reward => reward.investmentId === investment.id)
         .reduce((sum, reward) => sum.plus(reward.amountUSDT as Decimal), new Decimal(0));

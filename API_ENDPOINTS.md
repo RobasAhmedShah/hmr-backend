@@ -1430,3 +1430,524 @@ Get growth metrics and time-series analytics.
 - **Peak Analysis**: Identify highest activity days with counts and volumes
 - **Comprehensive Metrics**: Total counts, averages, and financial aggregations
 
+---
+
+## 11. Mobile API Endpoints
+
+All mobile endpoints are prefixed with `/api/mobile/*` and are optimized for mobile app consumption with transformed field names and reduced payloads.
+
+### Authentication
+
+All mobile endpoints (except auth endpoints) require JWT authentication:
+```
+Authorization: Bearer <jwt_token>
+```
+
+The `ENABLE_AUTH` environment variable can be set to `false` to disable authentication globally for development.
+
+---
+
+### 11.1 Authentication Endpoints
+
+#### POST /api/mobile/auth/login
+
+Authenticate user with email and password.
+
+**Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response** (200):
+```json
+{
+  "user": {
+    "id": "uuid...",
+    "displayCode": "USR-000001",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "phone": "+923001234567",
+    "role": "user",
+    "isActive": true
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Errors:**
+- `401`: Invalid email or password
+- `403`: User account disabled
+
+---
+
+#### POST /api/mobile/auth/register
+
+Register a new user. Automatically creates wallet, KYC verification, and portfolio.
+
+**Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "fullName": "John Doe",
+  "phone": "+923001234567"
+}
+```
+
+**Response** (201):
+Same structure as login response.
+
+**Errors:**
+- `400`: Invalid input
+- `409`: Email already exists
+
+---
+
+#### POST /api/mobile/auth/refresh
+
+Refresh expired access token.
+
+**Body:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response** (200):
+```json
+{
+  "token": "new_access_token",
+  "refreshToken": "new_refresh_token"
+}
+```
+
+**Errors:**
+- `401`: Invalid or expired refresh token
+
+---
+
+#### POST /api/mobile/auth/logout
+
+Logout user (optional token blacklist).
+
+**Authentication**: Required
+
+**Response** (200):
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+#### GET /api/mobile/auth/me
+
+Get current authenticated user information.
+
+**Authentication**: Required
+
+**Response** (200):
+```json
+{
+  "id": "uuid...",
+  "displayCode": "USR-000001",
+  "email": "user@example.com",
+  "fullName": "John Doe",
+  "phone": "+923001234567",
+  "dob": "1990-01-15",
+  "address": "123 Main St, Karachi",
+  "profileImage": "https://example.com/image.jpg",
+  "role": "user",
+  "isActive": true,
+  "createdAt": "2025-01-12T10:00:00.000Z",
+  "updatedAt": "2025-01-12T10:00:00.000Z"
+}
+```
+
+---
+
+### 11.2 Properties Endpoints
+
+#### GET /api/mobile/properties
+
+List properties with filters, pagination, and search. Optimized for mobile with transformed field names.
+
+**Authentication**: Optional (public by default)
+
+**Query Parameters:**
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 20, max: 100): Items per page
+- `city` (optional): Filter by city
+- `status` (optional): Filter by status (`planning`, `construction`, `active`, `onhold`, `soldout`, `completed`)
+- `minROI` (optional): Minimum ROI percentage
+- `maxPricePerToken` (optional): Maximum token price
+- `search` (optional): Search in title, description, or city
+- `filter` (optional): Predefined filter (`Trending`, `High Yield`, `New Listings`, `Completed`)
+
+**Response** (200):
+```json
+{
+  "data": [
+    {
+      "id": "uuid...",
+      "displayCode": "PROP-000001",
+      "title": "Marina View Residences",
+      "location": "DHA Phase 8, Karachi",
+      "city": "Karachi",
+      "valuation": 1000000,
+      "tokenPrice": 1000,
+      "minInvestment": 1000,
+      "totalTokens": 1000,
+      "soldTokens": 250,
+      "estimatedROI": 10,
+      "estimatedYield": 10,
+      "completionDate": "2026-12-31",
+      "status": "funding",
+      "images": ["https://example.com/img1.jpg"],
+      "description": "Luxury waterfront apartments...",
+      "amenities": ["pool", "gym", "parking"],
+      "builder": {
+        "id": "uuid...",
+        "name": "HMR Builders",
+        "logo": "https://example.com/logo.png"
+      },
+      "features": {
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 1500,
+        "floors": 10,
+        "units": 100
+      },
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-12T00:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 45,
+    "totalPages": 3
+  }
+}
+```
+
+---
+
+#### GET /api/mobile/properties/:id
+
+Get property by UUID or displayCode (e.g., "PROP-000001").
+
+**Authentication**: Optional (public by default)
+
+**Path Parameters:**
+- `id`: Property UUID or displayCode
+
+**Response** (200):
+Same structure as single property object in list response, with additional details.
+
+**Errors:**
+- `404`: Property not found
+
+---
+
+### 11.3 Investments Endpoints
+
+#### POST /api/mobile/investments
+
+Create a new investment.
+
+**Authentication**: Required
+
+**Body:**
+```json
+{
+  "propertyId": "uuid...",
+  "tokenCount": 2.5
+}
+```
+
+**Response** (201):
+```json
+{
+  "id": "uuid...",
+  "displayCode": "INV-000001",
+  "userId": "uuid...",
+  "propertyId": "uuid...",
+  "property": {
+    "id": "uuid...",
+    "title": "Marina View Residences",
+    "tokenPrice": 1000
+  },
+  "tokens": 2.5,
+  "investedAmount": 2500,
+  "currentValue": 2875,
+  "roi": 15,
+  "monthlyRentalIncome": 19.79,
+  "status": "confirmed",
+  "paymentStatus": "completed",
+  "purchaseDate": "2025-01-12T10:00:00.000Z",
+  "createdAt": "2025-01-12T10:00:00.000Z"
+}
+```
+
+**Errors:**
+- `400`: Insufficient balance
+- `400`: Not enough tokens available
+- `404`: Property not found
+- `403`: KYC not verified
+
+---
+
+#### GET /api/mobile/investments
+
+Get all investments for the authenticated user.
+
+**Authentication**: Required
+
+**Response** (200):
+```json
+{
+  "investments": [
+    {
+      "id": "uuid...",
+      "displayCode": "INV-000001",
+      "property": {
+        "id": "uuid...",
+        "displayCode": "PROP-000001",
+        "title": "Marina View Residences",
+        "images": ["https://example.com/img1.jpg"],
+        "tokenPrice": 1000
+      },
+      "tokens": 2.5,
+      "investedAmount": 2500,
+      "currentValue": 2875,
+      "roi": 15,
+      "rentalYield": 8,
+      "monthlyRentalIncome": 19.79,
+      "purchaseDate": "2025-01-12T10:00:00.000Z",
+      "createdAt": "2025-01-12T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Note:** `currentValue` includes a 15% growth multiplier. `monthlyRentalIncome` is calculated based on `currentValue`.
+
+---
+
+#### GET /api/mobile/investments/:id
+
+Get investment by ID.
+
+**Authentication**: Required
+
+**Path Parameters:**
+- `id`: Investment UUID or displayCode
+
+**Response** (200):
+Same structure as single investment object in list response.
+
+**Errors:**
+- `404`: Investment not found
+- `403`: Not authorized (not your investment)
+
+---
+
+### 11.4 Wallet Endpoints
+
+#### GET /api/mobile/wallet
+
+Get wallet balance and aggregated portfolio information.
+
+**Authentication**: Required
+
+**Response** (200):
+```json
+{
+  "usdc": 5000,
+  "totalValue": 12500,
+  "totalInvested": 7500,
+  "totalEarnings": 250,
+  "pendingDeposits": 0,
+  "recentTransactions": [
+    {
+      "id": "uuid...",
+      "type": "deposit",
+      "amount": 5000,
+      "date": "2025-01-12T10:00:00.000Z",
+      "status": "completed"
+    }
+  ]
+}
+```
+
+**Note:** 
+- `totalValue` = wallet balance + portfolio current value
+- `totalEarnings` = sum of (currentValue - investedAmount) for all investments
+- `currentValue` includes 15% growth multiplier
+
+---
+
+### 11.5 Transactions Endpoints
+
+#### GET /api/mobile/transactions
+
+Get transactions for the authenticated user with filters and pagination.
+
+**Authentication**: Required
+
+**Query Parameters:**
+- `page` (optional, default: 1): Page number
+- `limit` (optional, default: 20, max: 100): Items per page
+- `type` (optional): Filter by type (`deposit`, `withdrawal`, `investment`, `rental_income`, `return`, `fee`)
+- `status` (optional): Filter by status (`pending`, `completed`, `failed`)
+- `propertyId` (optional): Filter by property UUID
+
+**Response** (200):
+```json
+{
+  "data": [
+    {
+      "id": "uuid...",
+      "type": "deposit",
+      "amount": 5000,
+      "date": "2025-01-12T10:00:00.000Z",
+      "description": "Wallet deposit",
+      "status": "completed",
+      "currency": "USDC",
+      "propertyId": null,
+      "propertyTitle": null,
+      "transactionHash": "TXN-000005"
+    },
+    {
+      "id": "uuid...",
+      "type": "investment",
+      "amount": -2500,
+      "date": "2025-01-12T11:00:00.000Z",
+      "description": "Investment in Marina View Residences",
+      "status": "completed",
+      "currency": "USDC",
+      "propertyId": "uuid...",
+      "propertyTitle": "Marina View Residences",
+      "transactionHash": "TXN-000006"
+    },
+    {
+      "id": "uuid...",
+      "type": "rental_income",
+      "amount": 16.67,
+      "date": "2025-01-01T00:00:00.000Z",
+      "description": "Rental income from Marina View Residences",
+      "status": "completed",
+      "currency": "USDC",
+      "propertyId": "uuid...",
+      "propertyTitle": "Marina View Residences",
+      "transactionHash": "RWD-000001"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 15,
+    "totalPages": 1
+  }
+}
+```
+
+**Note:** Investment amounts are negative. Transaction type `reward` is transformed to `rental_income` for mobile app.
+
+---
+
+### 11.6 Profile Endpoints
+
+#### GET /api/mobile/profile
+
+Get user profile with security and notification settings.
+
+**Authentication**: Required
+
+**Response** (200):
+```json
+{
+  "userInfo": {
+    "id": "uuid...",
+    "displayCode": "USR-000001",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "phone": "+923001234567",
+    "dob": "1990-01-15",
+    "address": "123 Main St, Karachi",
+    "profileImage": "https://example.com/image.jpg",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-01-12T10:00:00.000Z",
+    "updatedAt": "2025-01-12T10:00:00.000Z"
+  },
+  "securitySettings": {
+    "twoFactorAuth": false,
+    "biometricLogin": true,
+    "passwordLastChanged": null
+  },
+  "notificationSettings": {
+    "pushNotifications": true,
+    "emailNotifications": true,
+    "smsNotifications": false,
+    "investmentUpdates": true,
+    "propertyAlerts": true,
+    "monthlyReports": true,
+    "marketingOffers": false,
+    "securityAlerts": true,
+    "paymentReminders": true,
+    "portfolioMilestones": true,
+    "doNotDisturb": {
+      "enabled": false,
+      "startTime": "22:00",
+      "endTime": "08:00"
+    }
+  }
+}
+```
+
+---
+
+#### PATCH /api/mobile/profile
+
+Update user profile information.
+
+**Authentication**: Required
+
+**Body** (all fields optional):
+```json
+{
+  "fullName": "John Michael Doe",
+  "email": "newemail@example.com",
+  "phone": "+923001234567",
+  "dob": "1990-01-15",
+  "address": "123 Main St, Karachi, Pakistan",
+  "profileImage": "https://example.com/new-image.jpg"
+}
+```
+
+**Response** (200):
+Updated profile object with same structure as GET response.
+
+**Errors:**
+- `400`: Invalid input
+- `409`: Email already exists (if email is being changed)
+
+---
+
+## Mobile API Notes
+
+- **Field Transformations**: Mobile endpoints transform backend field names to match mobile app expectations (e.g., `totalValueUSDT` → `valuation`, `pricePerTokenUSDT` → `tokenPrice`).
+- **Calculated Values**: Some fields are calculated on-the-fly (e.g., `currentValue` includes 15% growth, `totalEarnings` is sum of investment gains).
+- **Authentication**: Can be globally disabled via `ENABLE_AUTH=false` environment variable for development.
+- **Public Routes**: Properties endpoints are public by default but can be protected if needed.
+- **Pagination**: All list endpoints support pagination with `page` and `limit` query parameters.
+- **Filtering**: Properties and transactions support multiple filter options via query parameters.
+

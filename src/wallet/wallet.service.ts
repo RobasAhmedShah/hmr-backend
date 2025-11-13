@@ -139,9 +139,9 @@ export class WalletService {
     userId: string;
     userDisplayCode: string;
     amountUSDT: Decimal;
-    methodId: string;
-    methodType: 'card' | 'bank' | 'crypto';
-    provider: string;
+    methodId?: string;
+    methodType?: 'card' | 'bank' | 'crypto';
+    provider?: string;
   }) {
     return this.dataSource.transaction(async (manager) => {
       const wallets = manager.getRepository(Wallet);
@@ -167,11 +167,13 @@ export class WalletService {
       const txn = transactions.create({
         userId: dto.userId,
         walletId: wallet.id,
-        paymentMethodId: dto.methodId,
+        paymentMethodId: dto.methodId || null,
         type: 'deposit',
         amountUSDT: dto.amountUSDT,
         status: 'completed',
-        description: `Deposit via ${dto.provider} ${dto.methodType}`,
+        description: dto.provider && dto.methodType 
+          ? `Deposit via ${dto.provider} ${dto.methodType}` 
+          : 'User deposit',
         displayCode: txnDisplayCode,
       });
       const savedTxn = await transactions.save(txn);

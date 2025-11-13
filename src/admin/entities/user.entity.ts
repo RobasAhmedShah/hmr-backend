@@ -16,6 +16,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
+  password?: string | null;
+
   @Column({ type: 'varchar', length: 32, nullable: true })
   phone?: string | null;
 
@@ -24,6 +27,15 @@ export class User {
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  @Column({ type: 'date', nullable: true })
+  dob?: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  address?: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  profileImage?: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

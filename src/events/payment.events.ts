@@ -52,7 +52,7 @@ export interface WalletFundedEvent {
   amountUSDT: Decimal;
   transactionId: string;
   transactionDisplayCode: string;
-  methodId: string;
-  methodType: 'card' | 'bank' | 'crypto';
-  provider: string;
+  methodId?: string | null;
+  methodType?: 'card' | 'bank' | 'crypto' | null;
+  provider?: string | null;
 }

@@ -19,6 +19,13 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ListenersModule } from './listeners/listeners.module';
 import { UploadModule } from './upload/upload.module';
 import { ChatbotDatabaseModule } from './chatbot-database/chatbot-database.module';
+import { MobileAuthModule } from './mobile-auth/mobile-auth.module';
+import { MobilePropertiesModule } from './mobile-properties/mobile-properties.module';
+import { MobileInvestmentsModule } from './mobile-investments/mobile-investments.module';
+import { MobileWalletModule } from './mobile-wallet/mobile-wallet.module';
+import { MobileTransactionsModule } from './mobile-transactions/mobile-transactions.module';
+import { MobileProfileModule } from './mobile-profile/mobile-profile.module';
+import { MobilePaymentMethodsModule } from './mobile-payment-methods/mobile-payment-methods.module';
 
 @Module({
   imports: [
@@ -42,6 +49,13 @@ import { ChatbotDatabaseModule } from './chatbot-database/chatbot-database.modul
     ListenersModule, // Event listeners for cross-service updates
     UploadModule, // File upload system
     ChatbotDatabaseModule, // Chatbot database query endpoints for AI tool calling
+    MobileAuthModule, // Mobile authentication module
+    MobilePropertiesModule, // Mobile properties endpoints
+    MobileInvestmentsModule, // Mobile investments endpoints
+    MobileWalletModule, // Mobile wallet endpoints
+    MobileTransactionsModule, // Mobile transactions endpoints
+    MobileProfileModule, // Mobile profile endpoints
+    MobilePaymentMethodsModule, // Mobile payment methods endpoints
   ],
   controllers: [AppController],
   providers: [AppService],
