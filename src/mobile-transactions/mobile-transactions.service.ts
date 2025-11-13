@@ -116,29 +116,43 @@ export class MobileTransactionsService {
 
   private transformTransaction(transaction: Transaction): any {
     // Map transaction type to mobile app format
+    // Backend types: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'fee' | 'reward' | 'inflow'
+    // Frontend types: 'deposit' | 'withdraw' | 'investment' | 'rental_income' | 'rental' | 'transfer'
     let type: string = transaction.type;
-    if (transaction.type === 'reward') {
-      type = 'rental_income'; // Map reward to rental_income for mobile
-    }
+    
+    const typeMapping: Record<string, string> = {
+      'deposit': 'deposit',
+      'withdrawal': 'withdraw',
+      'investment': 'investment',
+      'reward': 'rental_income', // Map reward to rental_income for mobile
+      'return': 'rental_income', // Map return to rental_income as well
+      'inflow': 'deposit', // Map inflow to deposit
+      'fee': 'withdraw', // Map fee to withdraw (money going out)
+    };
+    
+    type = typeMapping[transaction.type] || transaction.type;
 
-    // Mobile app expects investment transactions to have negative amounts
-    // amount: -amount (as per APP_FLOW_DOCUMENTATION.md line 444)
+    // Mobile app expects:
+    // - Positive amounts for deposits and rental income
+    // - Negative amounts for withdrawals and investments
     let amount = (transaction.amountUSDT as Decimal).toNumber();
-    if (transaction.type === 'investment') {
-      amount = -Math.abs(amount); // Ensure negative for investments
+    
+    if (transaction.type === 'investment' || transaction.type === 'withdrawal' || transaction.type === 'fee') {
+      amount = -Math.abs(amount); // Ensure negative for investments, withdrawals, and fees
+    } else {
+      amount = Math.abs(amount); // Ensure positive for deposits, rewards, returns, inflows
     }
 
     return {
       id: transaction.id,
       type,
       amount,
-      date: transaction.createdAt,
+      date: transaction.createdAt.toISOString(), // Convert Date to ISO string
       description: transaction.description || this.generateDescription(transaction),
       status: transaction.status,
       currency: 'USDC',
-      propertyId: transaction.propertyId || null,
-      propertyTitle: transaction.property?.title || null,
-      transactionHash: transaction.displayCode, // Use displayCode as transaction hash
+      propertyId: transaction.propertyId || undefined,
+      propertyTitle: transaction.property?.title || undefined,
     };
   }
 

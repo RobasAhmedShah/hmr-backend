@@ -11,8 +11,11 @@ export class MobilePaymentMethodsService {
   async getPaymentMethods(userId: string) {
     const methods = await this.paymentMethodsService.findByUserId(userId);
     
+    // Filter out disabled (removed) payment methods
+    const activeMethods = methods.filter(method => method.status !== 'disabled');
+    
     // Transform for mobile app - mask card numbers and format response
-    return methods.map(method => ({
+    return activeMethods.map(method => ({
       id: method.id,
       type: method.type,
       provider: method.provider,
@@ -106,7 +109,25 @@ export class MobilePaymentMethodsService {
       throw new ForbiddenException('You do not have access to this payment method');
     }
     
-    return this.paymentMethodsService.setDefault(methodId, dto);
+    const updatedMethod = await this.paymentMethodsService.setDefault(methodId, dto);
+    
+    // Return transformed response for mobile app
+    return {
+      id: updatedMethod.id,
+      type: updatedMethod.type,
+      provider: updatedMethod.provider,
+      status: updatedMethod.status,
+      isDefault: updatedMethod.isDefault,
+      createdAt: updatedMethod.createdAt,
+      cardDetails: updatedMethod.cardDetails ? {
+        cardNumber: this.maskCardNumber(updatedMethod.cardDetails.cardNumber),
+        cardholderName: updatedMethod.cardDetails.cardholderName,
+        expiryMonth: updatedMethod.cardDetails.expiryMonth,
+        expiryYear: updatedMethod.cardDetails.expiryYear,
+        cardType: updatedMethod.cardDetails.cardType,
+        cardCategory: updatedMethod.cardDetails.cardCategory,
+      } : null,
+    };
   }
 
   async deletePaymentMethod(userId: string, methodId: string) {

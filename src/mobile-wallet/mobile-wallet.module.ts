@@ -6,9 +6,17 @@ import { WalletModule } from '../wallet/wallet.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { InvestmentsModule } from '../investments/investments.module';
+import { PaymentMethodsModule } from '../payment-methods/payment-methods.module';
 
 @Module({
-  imports: [ConfigModule, WalletModule, PortfolioModule, TransactionsModule, InvestmentsModule],
+  imports: [
+    ConfigModule,
+    WalletModule,
+    PortfolioModule,
+    TransactionsModule,
+    InvestmentsModule,
+    PaymentMethodsModule,
+  ],
   controllers: [MobileWalletController],
   providers: [MobileWalletService],
   exports: [MobileWalletService],

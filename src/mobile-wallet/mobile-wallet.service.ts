@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { WalletService } from '../wallet/wallet.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { InvestmentsService } from '../investments/investments.service';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
+import { MobileDepositDto } from './dto/mobile-deposit.dto';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -12,6 +14,7 @@ export class MobileWalletService {
     private readonly portfolioService: PortfolioService,
     private readonly transactionsService: TransactionsService,
     private readonly investmentsService: InvestmentsService,
+    private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
 
   async getWallet(userId: string): Promise<any> {
@@ -82,6 +85,58 @@ export class MobileWalletService {
       totalInvested: new Decimal(portfolioData.summary?.totalInvestedUSDT || '0').toNumber(),
       totalEarnings: totalEarnings.toNumber(), // Calculated from investments (currentValue - investedAmount)
       pendingDeposits: pendingDeposits.toNumber(),
+    };
+  }
+
+  async deposit(userId: string, dto: MobileDepositDto): Promise<any> {
+    // If payment method ID is not provided, find the default payment method
+    let paymentMethodId = dto.paymentMethodId;
+
+    if (!paymentMethodId) {
+      // Find user's default payment method
+      const paymentMethods = await this.paymentMethodsService.findByUserId(userId);
+      const defaultMethod = paymentMethods.find(
+        (method) => method.isDefault && method.status === 'verified',
+      );
+
+      if (!defaultMethod) {
+        throw new BadRequestException(
+          'No payment method provided and no default payment method found. Please add a payment method first.',
+        );
+      }
+
+      paymentMethodId = defaultMethod.id;
+    }
+
+    // Verify the payment method belongs to the user and is verified
+    const paymentMethod = await this.paymentMethodsService.findOne(paymentMethodId);
+
+    if (!paymentMethod) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    if (paymentMethod.userId !== userId) {
+      throw new BadRequestException('Payment method does not belong to you');
+    }
+
+    if (paymentMethod.status !== 'verified') {
+      throw new BadRequestException('Payment method is not verified');
+    }
+
+    // Process deposit using payment methods service (which handles the wallet service internally)
+    const result = await this.paymentMethodsService.initiateDeposit({
+      userId: userId,
+      amountUSDT: dto.amountUSDT,
+      methodId: paymentMethodId,
+    });
+
+    // Fetch and return updated wallet balance
+    const updatedWallet = await this.getWallet(userId);
+
+    return {
+      success: true,
+      transaction: result.transaction,
+      wallet: updatedWallet,
     };
   }
 }

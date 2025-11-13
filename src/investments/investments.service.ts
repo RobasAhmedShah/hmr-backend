@@ -107,6 +107,19 @@ export class InvestmentsService {
       const txnResult = await manager.query('SELECT nextval(\'transaction_display_seq\') as nextval');
       const txnDisplayCode = `TXN-${txnResult[0].nextval.toString().padStart(6, '0')}`;
       
+      // Create and save the transaction record
+      const transaction = manager.create(Transaction, {
+        userId: actualUserId,
+        walletId: wallet.id,
+        propertyId: property.id,
+        type: 'investment',
+        status: 'completed',
+        amountUSDT,
+        displayCode: txnDisplayCode,
+        description: `Investment in ${property.title}`,
+      });
+      await manager.save(Transaction, transaction);
+      
       // Step 9: Get organization for event emission
       const organization = await manager.findOne(Organization, {
         where: { id: property.organizationId },

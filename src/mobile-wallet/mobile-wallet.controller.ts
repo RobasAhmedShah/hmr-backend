@@ -1,8 +1,9 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { MobileWalletService } from './mobile-wallet.service';
 import { JwtAuthGuard } from '../mobile-auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../admin/entities/user.entity';
+import { MobileDepositDto } from './dto/mobile-deposit.dto';
 
 @Controller('api/mobile/wallet')
 @UseGuards(JwtAuthGuard)
@@ -12,6 +13,14 @@ export class MobileWalletController {
   @Get()
   async getWallet(@CurrentUser() user: User) {
     return this.mobileWalletService.getWallet(user.id);
+  }
+
+  @Post('deposit')
+  async deposit(
+    @CurrentUser() user: User,
+    @Body() dto: MobileDepositDto,
+  ) {
+    return this.mobileWalletService.deposit(user.id, dto);
   }
 }
 

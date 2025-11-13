@@ -15,7 +15,7 @@ export class UsersService {
     // Check if id is UUID or displayCode
     const isIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     
-    // Select only columns that exist in the database (exclude dob if it doesn't exist)
+    // Select all user fields including profile fields
     const selectFields: (keyof User)[] = [
       'id',
       'displayCode',
@@ -24,6 +24,7 @@ export class UsersService {
       'phone',
       'role',
       'isActive',
+      'dob',
       'address',
       'profileImage',
       'createdAt',
