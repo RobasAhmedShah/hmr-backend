@@ -3,15 +3,19 @@ import {
   UnauthorizedException,
   ConflictException,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { OAuth2Client } from 'google-auth-library';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { User } from '../admin/entities/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { KycVerification } from '../kyc/entities/kyc-verification.entity';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
+import { MagicService } from './services/magic.service';
 import Decimal from 'decimal.js';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
@@ -31,6 +35,8 @@ export class MobileAuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+    private readonly magicService: MagicService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
   ) {}
@@ -87,7 +93,7 @@ export class MobileAuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // Create user in transaction with Wallet, KYC, Portfolio
+    // Create user in transaction with Wallet, KYC, Portfolio, and Magic wallet
     return this.dataSource.transaction(async (manager) => {
       const users = manager.getRepository(User);
       const wallets = manager.getRepository(Wallet);
@@ -98,6 +104,19 @@ export class MobileAuthService {
       const result = await users.query('SELECT nextval(\'user_display_seq\') as nextval');
       const displayCode = `USR-${result[0].nextval.toString().padStart(6, '0')}`;
 
+      // Try to create/get Magic wallet
+      let magicWalletAddress: string | null = null;
+      let magicWalletDid: string | null = null;
+      try {
+        const magicWallet = await this.magicService.createWallet(dto.email);
+        if (magicWallet) {
+          magicWalletAddress = magicWallet.address;
+          magicWalletDid = magicWallet.did;
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to create Magic wallet for ${dto.email}, will be created on first login:`, error);
+      }
+
       // Create user
       const user = users.create({
         displayCode,
@@ -107,6 +126,8 @@ export class MobileAuthService {
         password: hashedPassword,
         role: 'user',
         isActive: true,
+        magicWalletAddress,
+        magicWalletDid,
       });
       const savedUser = await users.save(user);
 
@@ -154,6 +175,171 @@ export class MobileAuthService {
         ...tokens,
       };
     });
+  }
+
+  async googleAuth(idToken: string): Promise<AuthResponse> {
+    try {
+      // Verify Google ID token
+      const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+      if (!clientId) {
+        throw new BadRequestException('Google OAuth not configured');
+      }
+
+      const client = new OAuth2Client(clientId);
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: clientId,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        throw new UnauthorizedException('Invalid Google token');
+      }
+
+      const email = payload.email;
+      const name = payload.name || '';
+      const picture = payload.picture || null;
+
+      if (!email) {
+        throw new UnauthorizedException('Email not provided in Google token');
+      }
+
+      // Find or create user
+      let user = await this.userRepo.findOne({
+        where: { email },
+      });
+
+      const isNewUser = !user;
+
+      if (user) {
+        // Existing user - link Google account
+        // Update profile image if not set and Google provides one
+        if (!user.profileImage && picture) {
+          user.profileImage = picture;
+        }
+        // Update name if it's different (optional)
+        if (name && user.fullName !== name) {
+          user.fullName = name;
+        }
+        await this.userRepo.save(user);
+        this.logger.log(`Google account linked to existing user: ${user.displayCode}`);
+      } else {
+        // Create new user
+        return this.dataSource.transaction(async (manager) => {
+          const users = manager.getRepository(User);
+          const wallets = manager.getRepository(Wallet);
+          const kycRepo = manager.getRepository(KycVerification);
+          const portfolioRepo = manager.getRepository(Portfolio);
+
+          // Generate displayCode
+          const result = await users.query('SELECT nextval(\'user_display_seq\') as nextval');
+          const displayCode = `USR-${result[0].nextval.toString().padStart(6, '0')}`;
+
+          // Try to create/get Magic wallet
+          let magicWalletAddress: string | null = null;
+          let magicWalletDid: string | null = null;
+          try {
+            const magicWallet = await this.magicService.createWallet(email);
+            if (magicWallet) {
+              magicWalletAddress = magicWallet.address;
+              magicWalletDid = magicWallet.did;
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to create Magic wallet for ${email}, will be created on first login:`, error);
+          }
+
+          // Create user
+          user = users.create({
+            displayCode,
+            fullName: name,
+            email,
+            phone: null,
+            password: null, // No password for Google OAuth users
+            role: 'user',
+            isActive: true,
+            profileImage: picture,
+            magicWalletAddress,
+            magicWalletDid,
+          });
+          const savedUser = await users.save(user);
+
+          // Create wallet
+          const wallet = wallets.create({
+            userId: savedUser.id,
+            balanceUSDT: new Decimal(0),
+            lockedUSDT: new Decimal(0),
+            totalDepositedUSDT: new Decimal(0),
+            totalWithdrawnUSDT: new Decimal(0),
+          });
+          await wallets.save(wallet);
+
+          // Create KYC verification record
+          const kyc = kycRepo.create({
+            userId: savedUser.id,
+            type: 'cnic',
+            status: 'pending',
+            documentFrontUrl: '',
+            submittedAt: new Date(),
+          });
+          await kycRepo.save(kyc);
+
+          // Create portfolio record
+          const portfolio = portfolioRepo.create({
+            userId: savedUser.id,
+            totalInvestedUSDT: new Decimal(0),
+            totalRewardsUSDT: new Decimal(0),
+            totalROIUSDT: new Decimal(0),
+            activeInvestments: 0,
+            lastUpdated: new Date(),
+          });
+          await portfolioRepo.save(portfolio);
+
+          this.logger.log(`User created via Google OAuth: ${savedUser.displayCode}`);
+
+          // Generate tokens
+          const tokens = await this.generateTokens(savedUser);
+
+          // Remove password from response
+          const { password, ...userWithoutPassword } = savedUser;
+
+          return {
+            user: userWithoutPassword,
+            ...tokens,
+          };
+        });
+      }
+
+      // For existing users, ensure Magic wallet exists
+      if (!user.magicWalletAddress) {
+        try {
+          const magicWallet = await this.magicService.createWallet(email);
+          if (magicWallet) {
+            user.magicWalletAddress = magicWallet.address;
+            user.magicWalletDid = magicWallet.did;
+            await this.userRepo.save(user);
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to create Magic wallet for existing user ${email}:`, error);
+        }
+      }
+
+      // Generate tokens
+      const tokens = await this.generateTokens(user);
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+
+      return {
+        user: userWithoutPassword,
+        ...tokens,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Google authentication error:', error);
+      throw new UnauthorizedException('Google authentication failed');
+    }
   }
 
   async refreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string }> {

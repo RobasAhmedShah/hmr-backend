@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MobileAuthController } from './mobile-auth.controller';
 import { MobileAuthService } from './mobile-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { MagicService } from './services/magic.service';
 import { UsersModule } from '../users/users.module';
 import { User } from '../admin/entities/user.entity';
 
@@ -30,8 +31,8 @@ import { User } from '../admin/entities/user.entity';
     UsersModule,
   ],
   controllers: [MobileAuthController],
-  providers: [MobileAuthService, JwtStrategy],
-  exports: [MobileAuthService, JwtStrategy],
+  providers: [MobileAuthService, JwtStrategy, MagicService],
+  exports: [MobileAuthService, JwtStrategy, MagicService],
 })
 export class MobileAuthModule {}
 

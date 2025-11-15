@@ -14,6 +14,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 import { User } from '../admin/entities/user.entity';
 
 @Controller('api/mobile/auth')
@@ -32,6 +33,13 @@ export class MobileAuthController {
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto) {
     return this.mobileAuthService.register(dto);
+  }
+
+  @Post('google')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async googleLogin(@Body() dto: GoogleAuthDto) {
+    return this.mobileAuthService.googleAuth(dto.idToken);
   }
 
   @Post('refresh')

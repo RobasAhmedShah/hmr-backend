@@ -37,6 +37,12 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   profileImage?: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  magicWalletAddress?: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  magicWalletDid?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
