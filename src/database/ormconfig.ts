@@ -8,7 +8,8 @@ const config: TypeOrmModuleOptions = {
   url: process.env.DATABASE_URL,
   ssl: true,
   autoLoadEntities: true,
-  synchronize: true,
+  // Disable synchronize in production - use migrations instead
+  synchronize: process.env.NODE_ENV !== 'production',
   extra: {
     ssl: { rejectUnauthorized: false },
   },
