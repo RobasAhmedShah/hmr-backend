@@ -17,7 +17,7 @@ export class Reward {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -25,7 +25,7 @@ export class Reward {
   @Column({ type: 'uuid' })
   investmentId: string;
 
-  @ManyToOne(() => Investment)
+  @ManyToOne(() => Investment, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'investmentId' })
   investment: Investment;
 

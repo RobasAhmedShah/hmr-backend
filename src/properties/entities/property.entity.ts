@@ -16,7 +16,7 @@ export class Property {
   @Column({ type: 'uuid' })
   organizationId: string;
 
-  @ManyToOne(() => Organization)
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'organizationId' })
   organization: Organization;
 

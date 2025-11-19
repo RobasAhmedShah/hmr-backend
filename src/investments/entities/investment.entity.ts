@@ -17,7 +17,7 @@ export class Investment {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -25,7 +25,7 @@ export class Investment {
   @Column({ type: 'uuid' })
   propertyId: string;
 
-  @ManyToOne(() => Property)
+  @ManyToOne(() => Property, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'propertyId' })
   property: Property;
 

@@ -20,7 +20,7 @@ export class Transaction {
   @Column({ type: 'uuid', nullable: true })
   userId?: string | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId' })
   user?: User;
 
@@ -28,7 +28,7 @@ export class Transaction {
   @Column({ type: 'uuid', nullable: true })
   walletId?: string | null;
 
-  @ManyToOne(() => Wallet, { nullable: true })
+  @ManyToOne(() => Wallet, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'walletId' })
   wallet?: Wallet;
 
@@ -36,7 +36,7 @@ export class Transaction {
   @Column({ type: 'uuid', nullable: true })
   organizationId?: string | null;
 
-  @ManyToOne(() => Organization, org => org.transactions, { nullable: true })
+  @ManyToOne(() => Organization, org => org.transactions, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'organizationId' })
   organization?: Organization;
 
@@ -44,7 +44,7 @@ export class Transaction {
   @Column({ type: 'uuid', nullable: true })
   propertyId?: string | null;
 
-  @ManyToOne(() => Property, { nullable: true })
+  @ManyToOne(() => Property, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'propertyId' })
   property?: Property;
 
@@ -52,7 +52,7 @@ export class Transaction {
   @Column({ type: 'uuid', nullable: true })
   paymentMethodId?: string | null;
 
-  @ManyToOne(() => PaymentMethod, { nullable: true })
+  @ManyToOne(() => PaymentMethod, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'paymentMethodId' })
   paymentMethod?: PaymentMethod;
 
