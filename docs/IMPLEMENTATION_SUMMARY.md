@@ -65,6 +65,7 @@ findByIdOrDisplayCode(idOrCode: string)
 - **Decimal Precision**: `DECIMAL(18,6)` for all financial fields
 - **Pessimistic Locks**: Atomic transactions for investments
 - **Foreign Key Constraints**: Proper relationships between entities
+- **Property Documents**: JSONB column on `properties` for admin-managed document metadata
 
 ## 📊 API Endpoints Summary
 

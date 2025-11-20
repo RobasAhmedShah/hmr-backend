@@ -62,6 +62,9 @@ export class Property {
   @Column({ type: 'jsonb', nullable: true })
   images?: any | null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  documents?: any | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
