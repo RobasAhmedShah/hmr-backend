@@ -65,6 +65,9 @@ export class Property {
   @Column({ type: 'jsonb', nullable: true })
   documents?: any | null;
 
+  @Column({ type: 'text', nullable: true })
+  legalDocPath?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

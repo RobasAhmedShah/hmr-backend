@@ -1,0 +1,135 @@
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+@Injectable()
+export class SupabaseService implements OnModuleInit {
+  private supabase: SupabaseClient;
+  private readonly assetsBucket: string;
+  private readonly certificatesBucket: string;
+  private readonly propertyDocumentsBucket: string;
+
+  constructor(private configService: ConfigService) {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    // Use service role key for backend operations (bypasses RLS)
+    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase URL and Service Role Key must be configured in environment variables');
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    this.assetsBucket = this.configService.get<string>('SUPABASE_ASSETS_BUCKET', 'assets');
+    this.certificatesBucket = this.configService.get<string>('SUPABASE_CERTIFICATES_BUCKET', 'certificates');
+    this.propertyDocumentsBucket = this.configService.get<string>(
+      'SUPABASE_PROPERTY_DOCUMENTS_BUCKET',
+      'property-documents',
+    );
+  }
+
+  onModuleInit() {
+    console.log('Supabase service initialized');
+    console.log(`Assets bucket: ${this.assetsBucket}`);
+    console.log(`Certificates bucket: ${this.certificatesBucket}`);
+    console.log(`Property documents bucket: ${this.propertyDocumentsBucket}`);
+  }
+
+  /**
+   * Upload PDF to certificates bucket
+   */
+  async uploadCertificate(
+    filePath: string,
+    fileBuffer: Buffer,
+    contentType: string = 'application/pdf',
+  ): Promise<{ path: string; publicUrl: string }> {
+    const { data, error } = await this.supabase.storage
+      .from(this.certificatesBucket)
+      .upload(filePath, fileBuffer, {
+        contentType,
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error(`Failed to upload certificate to Supabase: ${error.message}`);
+    }
+
+    // Get public URL (will be null for private buckets, use signed URL instead)
+    const { data: urlData } = this.supabase.storage
+      .from(this.certificatesBucket)
+      .getPublicUrl(filePath);
+
+    return {
+      path: data.path,
+      publicUrl: urlData.publicUrl,
+    };
+  }
+
+  /**
+   * Generate signed URL for private certificate (for mobile app)
+   */
+  async createSignedUrl(
+    filePath: string,
+    expiresIn: number = 3600, // 1 hour default
+  ): Promise<string> {
+    const { data, error } = await this.supabase.storage
+      .from(this.certificatesBucket)
+      .createSignedUrl(filePath, expiresIn);
+
+    if (error) {
+      throw new Error(`Failed to create signed URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
+  }
+
+  /**
+   * Get public URL for asset (stamps, watermarks) from assets bucket
+   */
+  getAssetUrl(assetPath: string): string {
+    const { data } = this.supabase.storage
+      .from(this.assetsBucket)
+      .getPublicUrl(assetPath);
+
+    return data.publicUrl;
+  }
+
+  /**
+   * Get public URL for property legal document
+   */
+  getPropertyDocumentUrl(propertyId: string): string {
+    const filePath = `${propertyId}.pdf`;
+    const { data } = this.supabase.storage
+      .from(this.propertyDocumentsBucket)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  /**
+   * Check if file exists in certificates bucket
+   */
+  async certificateExists(filePath: string): Promise<boolean> {
+    try {
+      const pathParts = filePath.split('/');
+      const folder = pathParts.slice(0, -1).join('/');
+      const fileName = pathParts[pathParts.length - 1];
+
+      const { data, error } = await this.supabase.storage
+        .from(this.certificatesBucket)
+        .list(folder, {
+          search: fileName,
+        });
+
+      return !error && data && data.length > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+}
+

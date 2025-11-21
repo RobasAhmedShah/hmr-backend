@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Summary Certificate</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Arial', 'Helvetica', sans-serif;
+      color: #333;
+      line-height: 1.6;
+      background: #fff;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 3px solid #16a34a;
+      padding-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #16a34a;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .certificate-body {
+      margin: 30px 0;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #16a34a;
+      margin-bottom: 15px;
+      border-left: 4px solid #16a34a;
+      padding-left: 10px;
+    }
+    
+    .summary-box {
+      background: #f0fdf4;
+      border: 2px solid #16a34a;
+      border-radius: 8px;
+      padding: 25px;
+      margin: 20px 0;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 15px;
+    }
+    
+    .summary-item {
+      text-align: center;
+    }
+    
+    .summary-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .summary-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #16a34a;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .info-item {
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+    
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111;
+    }
+    
+    .transactions-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: #fff;
+    }
+    
+    .transactions-table th {
+      background: #16a34a;
+      color: #fff;
+      padding: 12px;
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .transactions-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    
+    .transactions-table tr:hover {
+      background: #f9fafb;
+    }
+    
+    .stamps-section {
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+    }
+    
+    .stamps-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      margin: 20px 0;
+    }
+    
+    .stamp {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      opacity: 0.95;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+    }
+    
+    .footer-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>PORTFOLIO SUMMARY CERTIFICATE</h1>
+      <p>Complete Investment Portfolio for Property</p>
+    </div>
+    
+    <div class="certificate-body">
+      <div class="section">
+        <div class="section-title">Investor Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Investor Name</div>
+            <div class="info-value"><%= investorName %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">User ID</div>
+            <div class="info-value"><%= userId %></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Property Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Property Name</div>
+            <div class="info-value"><%= propertyName %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Property Code</div>
+            <div class="info-value"><%= propertyDisplayCode %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Location</div>
+            <div class="info-value"><%= propertyLocation %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Expected ROI</div>
+            <div class="info-value"><%= expectedROI %>%</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="summary-box">
+        <h3 style="color: #16a34a; margin-bottom: 15px; font-size: 20px;">Portfolio Summary</h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">Total Tokens Owned</div>
+            <div class="summary-value"><%= totalTokens %></div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Total Invested</div>
+            <div class="summary-value">$<%= totalInvested %> USDT</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Average Price</div>
+            <div class="summary-value">$<%= averagePrice %> USDT</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Ownership %</div>
+            <div class="summary-value"><%= ownershipPercentage %>%</div>
+          </div>
+        </div>
+      </div>
+      
+      <% if (transactions && transactions.length > 0) { %>
+      <div class="section">
+        <div class="section-title">Transaction History</div>
+        <table class="transactions-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Transaction ID</th>
+              <th>Tokens</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% transactions.forEach(function(txn) { %>
+            <tr>
+              <td><%= txn.date %></td>
+              <td><%= txn.displayCode %></td>
+              <td><%= txn.tokens %></td>
+              <td>$<%= txn.amount %> USDT</td>
+              <td style="color: #16a34a;"><%= txn.status %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+    
+    <div class="stamps-section">
+      <div class="stamps-container">
+        <% if (secpStampUrl) { %>
+        <img src="<%= secpStampUrl %>" alt="SECP Stamp" class="stamp" />
+        <% } %>
+        <% if (sbpStampUrl) { %>
+        <img src="<%= sbpStampUrl %>" alt="SBP Stamp" class="stamp" />
+        <% } %>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>This is an official portfolio summary certificate issued by Blocks Platform</p>
+      <div class="footer-info">
+        <div>
+          <strong>Certificate ID:</strong> <%= certificateId %><br>
+          <strong>Generated:</strong> <%= generatedAt %>
+        </div>
+        <div style="text-align: right;">
+          <strong>Property:</strong> <%= propertyDisplayCode %><br>
+          <strong>Verification:</strong> Valid
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

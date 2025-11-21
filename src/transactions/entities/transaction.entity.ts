@@ -80,6 +80,9 @@ export class Transaction {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: any | null;
 
+  @Column({ type: 'text', nullable: true })
+  certificatePath?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

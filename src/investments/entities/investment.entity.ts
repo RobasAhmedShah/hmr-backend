@@ -44,6 +44,9 @@ export class Investment {
   @Column('numeric', { precision: 5, scale: 2, transformer: DecimalTransformer })
   expectedROI: Decimal;
 
+  @Column({ type: 'text', nullable: true })
+  certificatePath?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

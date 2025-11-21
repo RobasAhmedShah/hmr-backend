@@ -100,8 +100,17 @@ export class MobileTransactionsService {
       .take(limit)
       .getMany();
 
-    // Transform transactions
-    const transformedTransactions = transactions.map((txn) => this.transformTransaction(txn));
+    // Transform transactions with error handling
+    const transformedTransactions = transactions
+      .map((txn) => {
+        try {
+          return this.transformTransaction(txn);
+        } catch (error) {
+          console.error(`[MobileTransactionsService] Error transforming transaction ${txn.id}:`, error);
+          return null;
+        }
+      })
+      .filter((txn) => txn !== null); // Remove failed transformations
 
     return {
       data: transformedTransactions,
@@ -132,10 +141,15 @@ export class MobileTransactionsService {
     
     type = typeMapping[transaction.type] || transaction.type;
 
+    // ✅ Safe Decimal conversion with null checks
+    const amountUSDT = transaction.amountUSDT 
+      ? new Decimal(transaction.amountUSDT) 
+      : new Decimal(0);
+    
     // Mobile app expects:
     // - Positive amounts for deposits and rental income
     // - Negative amounts for withdrawals and investments
-    let amount = (transaction.amountUSDT as Decimal).toNumber();
+    let amount = amountUSDT.toNumber();
     
     if (transaction.type === 'investment' || transaction.type === 'withdrawal' || transaction.type === 'fee') {
       amount = -Math.abs(amount); // Ensure negative for investments, withdrawals, and fees

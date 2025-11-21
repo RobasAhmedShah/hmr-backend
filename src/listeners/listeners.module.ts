@@ -5,6 +5,7 @@ import { OrganizationListener } from './organization.listener';
 import { TransactionListener } from './transaction.listener';
 import { AuditListener } from './audit.listener';
 import { PaymentMethodListener } from './payment-method.listener';
+import { CertificateListener } from './certificate.listener';
 import { Portfolio } from '../portfolio/entities/portfolio.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
@@ -14,6 +15,7 @@ import { Property } from '../properties/entities/property.entity';
 import { Investment } from '../investments/entities/investment.entity';
 import { Reward } from '../rewards/entities/reward.entity';
 import { PaymentMethod } from '../payment-methods/entities/payment-method.entity';
+import { CertificatesModule } from '../certificates/certificates.module';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { PaymentMethod } from '../payment-methods/entities/payment-method.entity
       Reward,
       PaymentMethod,
     ]),
+    CertificatesModule,
   ],
   providers: [
     PortfolioListener,
@@ -35,6 +38,7 @@ import { PaymentMethod } from '../payment-methods/entities/payment-method.entity
     TransactionListener,
     AuditListener,
     PaymentMethodListener,
+    CertificateListener,
   ],
   exports: [
     PortfolioListener,
@@ -42,6 +46,7 @@ import { PaymentMethod } from '../payment-methods/entities/payment-method.entity
     TransactionListener,
     AuditListener,
     PaymentMethodListener,
+    CertificateListener,
   ],
 })
 export class ListenersModule {}

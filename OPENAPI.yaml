@@ -29,6 +29,8 @@ tags:
     description: Manage and distribute ROI rewards.
   - name: Admin Dashboard & Analytics
     description: Comprehensive dashboard statistics and growth analytics with dynamic filtering.
+  - name: Certificates (Mobile)
+    description: PDF certificate generation and retrieval for mobile app.
 
 paths:
   # ----------------------------------------------
@@ -1297,6 +1299,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsResponse'
+
+  # ----------------------------------------------
+  # Certificates (Mobile)
+  # ----------------------------------------------
+  /api/mobile/certificates/transactions/{transactionId}:
+    get:
+      tags:
+        - Certificates (Mobile)
+      summary: Get transaction certificate PDF
+      description: Returns a signed URL for the transaction certificate PDF. Certificate is auto-generated when investment is completed.
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the transaction.
+      responses:
+        '200':
+          description: Transaction certificate PDF URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transactionId:
+                    type: string
+                    format: uuid
+                  pdfUrl:
+                    type: string
+                    format: uri
+                    description: Signed URL to the PDF certificate (expires in 1 hour)
+        '404':
+          description: Transaction not found.
+        '403':
+          description: You do not have access to this transaction certificate.
+
+  /api/mobile/certificates/properties/{propertyId}/legal-document:
+    get:
+      tags:
+        - Certificates (Mobile)
+      summary: Get property legal document PDF
+      description: Returns a signed URL for the property's legal document PDF (uploaded by admin).
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the property.
+      responses:
+        '200':
+          description: Property legal document PDF URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  propertyId:
+                    type: string
+                    format: uuid
+                  pdfUrl:
+                    type: string
+                    format: uri
+                    description: Signed URL to the PDF document (expires in 1 hour)
+        '404':
+          description: Property legal document not found.
+
+  /api/mobile/certificates/portfolio/{propertyId}:
+    get:
+      tags:
+        - Certificates (Mobile)
+      summary: Generate portfolio summary certificate PDF
+      description: Generates and returns a signed URL for the portfolio summary certificate PDF containing all user's investments in the specified property.
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the property.
+      responses:
+        '200':
+          description: Portfolio summary certificate PDF URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  propertyId:
+                    type: string
+                    format: uuid
+                  pdfUrl:
+                    type: string
+                    format: uri
+                    description: Signed URL to the PDF certificate (expires in 1 hour)
+                  certificatePath:
+                    type: string
+                    description: Path to the certificate in Supabase storage
+                    example: portfolio/user_id/property_id.pdf
+        '404':
+          description: Property not found or no investments found for this property.
 
 # ----------------------------------------------
 # Reusable Components

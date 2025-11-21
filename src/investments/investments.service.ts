@@ -31,7 +31,8 @@ export class InvestmentsService {
   ) {}
 
   async invest(userId: string, propertyId: string, tokensToBuy: Decimal) {
-    return this.dataSource.transaction(async (manager) => {
+    // ✅ Execute transaction first, then emit event AFTER it commits
+    const result = await this.dataSource.transaction(async (manager) => {
       // Step 1: Fetch and lock property (pessimistic_write)
       // Check if propertyId is UUID or displayCode
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
@@ -126,33 +127,49 @@ export class InvestmentsService {
       });
       if (!organization) throw new NotFoundException('Organization not found for property');
 
-      // Step 10: Emit investment completed event AFTER transaction commits
+      // Return data needed for event emission (but don't emit here)
+      return {
+        investment: savedInvestment,
+        transaction,
+        user,
+        property,
+        organization,
+        actualUserId,
+        tokensToBuy,
+        amountUSDT,
+      };
+    });
+
+    // ✅ NOW emit event AFTER transaction commits
+    try {
       const investmentEvent: InvestmentCompletedEvent = {
         eventId: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date(),
-        userId: actualUserId,
-        userDisplayCode: user.displayCode,
-        propertyId: property.id,
-        propertyDisplayCode: property.displayCode,
-        organizationId: organization.id,
-        organizationDisplayCode: organization.displayCode,
-        tokensPurchased: tokensToBuy,
-        amountUSDT,
-        investmentId: savedInvestment.id,
-        investmentDisplayCode: savedInvestment.displayCode,
+        userId: result.actualUserId,
+        userDisplayCode: result.user.displayCode,
+        propertyId: result.property.id,
+        propertyDisplayCode: result.property.displayCode,
+        organizationId: result.organization.id,
+        organizationDisplayCode: result.organization.displayCode,
+        tokensPurchased: result.tokensToBuy,
+        amountUSDT: result.amountUSDT,
+        investmentId: result.investment.id,
+        investmentDisplayCode: result.investment.displayCode,
       };
 
-      // Emit event for listeners to handle portfolio, organization, and transaction updates
-      try {
-        this.eventEmitter.emit('investment.completed', investmentEvent);
-        this.logger.log(`Investment completed event emitted for user ${user.displayCode}`);
-      } catch (error) {
-        this.logger.error('Failed to emit investment completed event:', error);
-        // Don't throw - let the main operation continue
-      }
+      this.eventEmitter.emit('investment.completed', investmentEvent);
+      this.logger.log(
+        `[InvestmentsService] ✅ Investment completed event emitted for user ${result.user.displayCode}, transaction: ${result.transaction.displayCode}`,
+      );
+    } catch (error) {
+      this.logger.error('[InvestmentsService] ❌ Failed to emit investment completed event:', error);
+      // Don't throw - let the main operation continue
+    }
 
-      return savedInvestment;
-    });
+    // Certificate generation will be handled by CertificateListener
+    // listening to 'investment.completed' event
+
+    return result.investment;
   }
 
   async create(dto: CreateInvestmentDto) {

@@ -20,7 +20,16 @@ export class MobileInvestmentsService {
 
   async findByUserId(userId: string): Promise<any[]> {
     const investments = await this.investmentsService.findByUserId(userId);
-    return investments.map((inv) => this.transformInvestment(inv));
+    return investments
+      .map((inv) => {
+        try {
+          return this.transformInvestment(inv);
+        } catch (error) {
+          console.error(`[MobileInvestmentsService] Error transforming investment ${inv.id}:`, error);
+          return null;
+        }
+      })
+      .filter((inv) => inv !== null); // Remove failed transformations
   }
 
   async findOne(id: string, userId?: string): Promise<any> {
@@ -39,22 +48,30 @@ export class MobileInvestmentsService {
   }
 
   private transformInvestment(investment: Investment): any {
+    // ✅ Safe Decimal conversion with null checks
+    const tokensPurchased = investment.tokensPurchased ? new Decimal(investment.tokensPurchased) : new Decimal(0);
+    const amountUSDT = investment.amountUSDT ? new Decimal(investment.amountUSDT) : new Decimal(0);
+    const propertyTokenPrice = investment.property?.pricePerTokenUSDT 
+      ? new Decimal(investment.property.pricePerTokenUSDT) 
+      : new Decimal(0);
+    const expectedROI = investment.expectedROI ? new Decimal(investment.expectedROI) : new Decimal(0);
+    const propertyROI = investment.property?.expectedROI 
+      ? new Decimal(investment.property.expectedROI) 
+      : expectedROI;
+
     // Calculate current value (tokens * current token price * 1.15)
     // Mobile app expects: currentValue = tokensPurchased × property.tokenPrice × 1.15
     // 1.15 = 15% growth estimate (matching mobile app calculation)
-    const baseValue = investment.tokensPurchased.mul(
-      investment.property?.pricePerTokenUSDT || new Decimal(0),
-    );
+    const baseValue = tokensPurchased.mul(propertyTokenPrice);
     const currentValue = baseValue.mul(1.15); // Apply 15% growth multiplier
 
     // Calculate ROI percentage
-    const investedAmount = investment.amountUSDT;
-    const roiDecimal = investedAmount.gt(0)
-      ? currentValue.minus(investedAmount).div(investedAmount).mul(100)
+    const roiDecimal = amountUSDT.gt(0)
+      ? currentValue.minus(amountUSDT).div(amountUSDT).mul(100)
       : new Decimal(0);
 
     // Calculate rental yield (using property's expectedROI)
-    const rentalYield = investment.property?.expectedROI || investment.expectedROI || new Decimal(0);
+    const rentalYield = propertyROI;
 
     // Calculate monthly rental income
     // Mobile app expects: monthlyRentalIncome = (currentValue × property.estimatedYield / 100) / 12
@@ -68,16 +85,16 @@ export class MobileInvestmentsService {
         ? {
             id: investment.property.id,
             displayCode: investment.property.displayCode,
-            title: investment.property.title,
+            title: investment.property.title || '',
             images: this.extractImages(investment.property.images),
-            tokenPrice: investment.property.pricePerTokenUSDT.toNumber(),
-            status: investment.property.status,
-            city: investment.property.city,
-            country: investment.property.country,
+            tokenPrice: propertyTokenPrice.toNumber(),
+            status: investment.property.status || 'active',
+            city: investment.property.city || null,
+            country: investment.property.country || null,
           }
         : null,
-      tokens: investment.tokensPurchased.toNumber(),
-      investedAmount: investment.amountUSDT.toNumber(),
+      tokens: tokensPurchased.toNumber(),
+      investedAmount: amountUSDT.toNumber(),
       currentValue: currentValue.toNumber(),
       roi: roiDecimal.toNumber(),
       rentalYield: rentalYield.toNumber(),

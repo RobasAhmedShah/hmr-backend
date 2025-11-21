@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction Certificate</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Arial', 'Helvetica', sans-serif;
+      color: #333;
+      line-height: 1.6;
+      background: #fff;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 3px solid #16a34a;
+      padding-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #16a34a;
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .certificate-body {
+      margin: 30px 0;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #16a34a;
+      margin-bottom: 15px;
+      border-left: 4px solid #16a34a;
+      padding-left: 10px;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .info-item {
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+    
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111;
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .transaction-details {
+      background: #f0fdf4;
+      border: 2px solid #16a34a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .transaction-details h3 {
+      color: #16a34a;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+    
+    .stamps-section {
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+    }
+    
+    .stamps-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      margin: 20px 0;
+    }
+    
+    .stamp {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      opacity: 0.95;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+    }
+    
+    .footer-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    
+    .verification-info {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    
+    .verification-info strong {
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>TRANSACTION CERTIFICATE</h1>
+      <p>Official Proof of Token Purchase</p>
+    </div>
+    
+    <div class="certificate-body">
+      <div class="section">
+        <div class="section-title">Transaction Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Transaction ID</div>
+            <div class="info-value"><%= transactionDisplayCode %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Date & Time</div>
+            <div class="info-value"><%= transactionDate %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Status</div>
+            <div class="info-value" style="color: #16a34a;"><%= transactionStatus %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Type</div>
+            <div class="info-value"><%= transactionType %></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Investor Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Investor Name</div>
+            <div class="info-value"><%= investorName %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">User ID</div>
+            <div class="info-value"><%= userId %></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="transaction-details">
+        <h3>Investment Details</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Property</div>
+            <div class="info-value"><%= propertyName %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Property Code</div>
+            <div class="info-value"><%= propertyDisplayCode %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Tokens Purchased</div>
+            <div class="info-value"><%= tokensPurchased %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Token Price</div>
+            <div class="info-value">$<%= tokenPrice %> USDT</div>
+          </div>
+          <div class="info-item full-width">
+            <div class="info-label">Total Investment Amount</div>
+            <div class="info-value" style="font-size: 24px; color: #16a34a;">$<%= totalAmount %> USDT</div>
+          </div>
+        </div>
+      </div>
+      
+      <% if (blockchainHash) { %>
+      <div class="verification-info">
+        <strong>Blockchain Verification:</strong><br>
+        Transaction Hash: <code><%= blockchainHash %></code><br>
+        <% if (blockchainNetwork) { %>
+        Network: <%= blockchainNetwork %><br>
+        <% } %>
+        This transaction has been recorded on the blockchain for permanent verification.
+      </div>
+      <% } %>
+    </div>
+    
+    <div class="stamps-section">
+      <div class="stamps-container">
+        <% if (secpStampUrl) { %>
+        <img src="<%= secpStampUrl %>" alt="SECP Stamp" class="stamp" />
+        <% } %>
+        <% if (sbpStampUrl) { %>
+        <img src="<%= sbpStampUrl %>" alt="SBP Stamp" class="stamp" />
+        <% } %>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>This is an official certificate issued by Blocks Platform</p>
+      <div class="footer-info">
+        <div>
+          <strong>Certificate ID:</strong> <%= certificateId %><br>
+          <strong>Generated:</strong> <%= generatedAt %>
+        </div>
+        <div style="text-align: right;">
+          <strong>Document Hash:</strong> <%= documentHash ? documentHash.substring(0, 16) + '...' : 'N/A' %><br>
+          <strong>Verification:</strong> Valid
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

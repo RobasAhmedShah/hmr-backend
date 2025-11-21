@@ -26,6 +26,10 @@ import { MobileWalletModule } from './mobile-wallet/mobile-wallet.module';
 import { MobileTransactionsModule } from './mobile-transactions/mobile-transactions.module';
 import { MobileProfileModule } from './mobile-profile/mobile-profile.module';
 import { MobilePaymentMethodsModule } from './mobile-payment-methods/mobile-payment-methods.module';
+import { SupabaseModule } from './supabase/supabase.module';
+import { PdfModule } from './pdf/pdf.module';
+import { CertificatesModule } from './certificates/certificates.module';
+import { MobileCertificatesModule } from './mobile-certificates/mobile-certificates.module';
 
 @Module({
   imports: [
@@ -56,6 +60,10 @@ import { MobilePaymentMethodsModule } from './mobile-payment-methods/mobile-paym
     MobileTransactionsModule, // Mobile transactions endpoints
     MobileProfileModule, // Mobile profile endpoints
     MobilePaymentMethodsModule, // Mobile payment methods endpoints
+    SupabaseModule, // Supabase storage integration
+    PdfModule, // PDF generation service
+    CertificatesModule, // Certificate generation service
+    MobileCertificatesModule, // Mobile certificate endpoints
   ],
   controllers: [AppController],
   providers: [AppService],

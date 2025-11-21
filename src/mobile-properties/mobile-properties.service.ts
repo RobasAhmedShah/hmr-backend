@@ -74,8 +74,17 @@ export class MobilePropertiesService {
       .take(limit)
       .getMany();
 
-    // Transform properties
-    const transformedProperties = properties.map((p) => this.transformProperty(p));
+    // Transform properties with error handling
+    const transformedProperties = properties
+      .map((p) => {
+        try {
+          return this.transformProperty(p);
+        } catch (error) {
+          console.error(`[MobilePropertiesService] Error transforming property ${p.id}:`, error);
+          return null;
+        }
+      })
+      .filter((p) => p !== null); // Remove failed transformations
 
     return {
       data: transformedProperties,
@@ -149,27 +158,34 @@ export class MobilePropertiesService {
   }
 
   private transformProperty(property: Property): any {
-    const soldTokens = property.totalTokens.minus(property.availableTokens);
+    // ✅ Safe Decimal conversion with null checks
+    const totalTokens = property.totalTokens ? new Decimal(property.totalTokens) : new Decimal(0);
+    const availableTokens = property.availableTokens ? new Decimal(property.availableTokens) : new Decimal(0);
+    const soldTokens = totalTokens.minus(availableTokens);
+    
+    const totalValueUSDT = property.totalValueUSDT ? new Decimal(property.totalValueUSDT) : new Decimal(0);
+    const pricePerTokenUSDT = property.pricePerTokenUSDT ? new Decimal(property.pricePerTokenUSDT) : new Decimal(0);
+    const expectedROI = property.expectedROI ? new Decimal(property.expectedROI) : new Decimal(0);
 
     return {
       id: property.id,
       displayCode: property.displayCode,
-      title: property.title,
+      title: property.title || '',
       location: property.city ? `${property.city}, ${property.country || ''}`.trim() : null,
-      city: property.city,
-      country: property.country,
-      valuation: property.totalValueUSDT.toNumber(),
-      tokenPrice: property.pricePerTokenUSDT.toNumber(),
-      minInvestment: property.pricePerTokenUSDT.toNumber(), // Minimum is one token
-      totalTokens: property.totalTokens.toNumber(),
+      city: property.city || null,
+      country: property.country || null,
+      valuation: totalValueUSDT.toNumber(),
+      tokenPrice: pricePerTokenUSDT.toNumber(),
+      minInvestment: pricePerTokenUSDT.toNumber(), // Minimum is one token
+      totalTokens: totalTokens.toNumber(),
       soldTokens: soldTokens.toNumber(),
-      availableTokens: property.availableTokens.toNumber(),
-      estimatedROI: property.expectedROI.toNumber(),
-      estimatedYield: property.expectedROI.toNumber(), // Same as ROI for now
+      availableTokens: availableTokens.toNumber(),
+      estimatedROI: expectedROI.toNumber(),
+      estimatedYield: expectedROI.toNumber(), // Same as ROI for now
       completionDate: null, // TODO: Add completionDate field to Property entity
-      status: property.status,
+      status: property.status || 'active',
       images: this.extractImages(property.images),
-      description: property.description,
+      description: property.description || '',
       amenities: this.extractAmenities(property.features),
       builder: {
         id: property.organization?.id || null,
@@ -179,8 +195,8 @@ export class MobilePropertiesService {
         projectsCompleted: 0, // TODO: Count completed properties for this organization
       },
       features: this.extractFeatures(property.features),
-      type: property.type,
-      slug: property.slug,
+      type: property.type || 'residential',
+      slug: property.slug || '',
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };

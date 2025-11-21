@@ -1,0 +1,40 @@
+### Certificate API Testing
+### Make sure your server is running on http://localhost:3000
+
+@baseUrl = http://localhost:3000
+@token = YOUR_JWT_TOKEN_HERE
+
+### 1. Login to get JWT token (replace with your credentials)
+POST {{baseUrl}}/api/mobile/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 2. Get Transaction Certificate
+### Replace {transactionId} with an actual transaction ID from your database
+GET {{baseUrl}}/api/mobile/certificates/transactions/{{transactionId}}
+Authorization: Bearer {{token}}
+
+### 3. Get Property Legal Document
+### Replace {propertyId} with an actual property ID from your database
+GET {{baseUrl}}/api/mobile/certificates/properties/{{propertyId}}/legal-document
+Authorization: Bearer {{token}}
+
+### 4. Generate Portfolio Summary Certificate
+### Replace {propertyId} with an actual property ID where user has investments
+GET {{baseUrl}}/api/mobile/certificates/portfolio/{{propertyId}}
+Authorization: Bearer {{token}}
+
+### 5. Make an Investment (to trigger auto-certificate generation)
+POST {{baseUrl}}/api/mobile/investments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "propertyId": "your-property-id",
+  "tokenCount": 2.5
+}
+
