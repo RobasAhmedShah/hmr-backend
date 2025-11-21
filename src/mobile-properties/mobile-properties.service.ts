@@ -195,11 +195,42 @@ export class MobilePropertiesService {
         projectsCompleted: 0, // TODO: Count completed properties for this organization
       },
       features: this.extractFeatures(property.features),
+      documents: this.extractDocuments(property.documents),
       type: property.type || 'residential',
       slug: property.slug || '',
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
+  }
+
+  private extractDocuments(documents: any): any[] {
+    if (!documents) return [];
+    
+    // If documents is already an array, return it
+    if (Array.isArray(documents)) {
+      return documents.map((doc) => ({
+        name: doc.name || 'Document',
+        type: doc.type || 'PDF',
+        verified: doc.verified !== undefined ? doc.verified : true,
+        url: doc.url || null,
+      }));
+    }
+    
+    // If documents is an object, try to extract array
+    if (typeof documents === 'object') {
+      // Check if it has a 'items' or 'list' property
+      const docArray = documents.items || documents.list || documents.docs || [];
+      if (Array.isArray(docArray)) {
+        return docArray.map((doc) => ({
+          name: doc.name || 'Document',
+          type: doc.type || 'PDF',
+          verified: doc.verified !== undefined ? doc.verified : true,
+          url: doc.url || null,
+        }));
+      }
+    }
+    
+    return [];
   }
 
   private extractImages(images: any): string[] {
