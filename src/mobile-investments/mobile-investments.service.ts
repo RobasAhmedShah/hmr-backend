@@ -104,6 +104,7 @@ export class MobileInvestmentsService {
       purchaseDate: investment.createdAt,
       createdAt: investment.createdAt,
       updatedAt: investment.updatedAt,
+      certificatePath: investment.certificatePath || null,
     };
   }
 
