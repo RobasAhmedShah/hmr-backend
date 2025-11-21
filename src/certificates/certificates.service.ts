@@ -89,9 +89,17 @@ export class CertificatesService {
       // Check if certificate already exists
       if (transaction.certificatePath) {
         this.logger.log(`[CertificatesService] ✅ Certificate already exists: ${transaction.certificatePath}`);
-        const signedUrl = await this.supabaseService.createSignedUrl(transaction.certificatePath);
+        
+        // Extract relative path if it's a full URL (for signed URL generation)
+        let relativePath = transaction.certificatePath;
+        if (transaction.certificatePath.startsWith('http://') || transaction.certificatePath.startsWith('https://')) {
+          const urlParts = transaction.certificatePath.split('/storage/v1/object/public/certificates/');
+          relativePath = urlParts.length > 1 ? urlParts[1] : transaction.certificatePath;
+        }
+        
+        const signedUrl = await this.supabaseService.createSignedUrl(relativePath);
         return {
-          certificatePath: transaction.certificatePath,
+          certificatePath: transaction.certificatePath, // Return stored full URL
           signedUrl,
         };
       }
@@ -172,12 +180,16 @@ export class CertificatesService {
 
       this.logger.log(`[CertificatesService] ✅ Uploaded to Supabase: ${uploadedPath}`);
 
-      // Save path to transaction table
-      transaction.certificatePath = uploadedPath;
-      await this.transactionRepo.save(transaction);
-      this.logger.log(`[CertificatesService] 💾 Saved certificate path to transaction: ${uploadedPath}`);
+      // ✅ Get full public URL for saving in database
+      const fullPublicUrl = this.supabaseService.getCertificatePublicUrl(uploadedPath);
+      this.logger.log(`[CertificatesService] 🔗 Full public URL: ${fullPublicUrl}`);
 
-      // ✅ ALSO save certificatePath to investments table
+      // Save full URL to transaction table
+      transaction.certificatePath = fullPublicUrl;
+      await this.transactionRepo.save(transaction);
+      this.logger.log(`[CertificatesService] 💾 Saved certificate path (full URL) to transaction: ${fullPublicUrl}`);
+
+      // ✅ ALSO save certificatePath (full URL) to investments table
       if (transaction.userId && transaction.propertyId) {
         const investment = await this.investmentRepo.findOne({
           where: {
@@ -188,9 +200,9 @@ export class CertificatesService {
         });
 
         if (investment) {
-          investment.certificatePath = uploadedPath;
+          investment.certificatePath = fullPublicUrl;
           await this.investmentRepo.save(investment);
-          this.logger.log(`[CertificatesService] 💾 Saved certificate path to investment ${investment.displayCode}: ${uploadedPath}`);
+          this.logger.log(`[CertificatesService] 💾 Saved certificate path (full URL) to investment ${investment.displayCode}: ${fullPublicUrl}`);
         } else {
           this.logger.warn(`[CertificatesService] ⚠️ Investment not found for userId=${transaction.userId}, propertyId=${transaction.propertyId}`);
         }
@@ -199,10 +211,10 @@ export class CertificatesService {
       // Generate signed URL
       const signedUrl = await this.supabaseService.createSignedUrl(uploadedPath);
 
-      this.logger.log(`[CertificatesService] ✅ Transaction certificate generated successfully: ${uploadedPath}`);
+      this.logger.log(`[CertificatesService] ✅ Transaction certificate generated successfully: ${fullPublicUrl}`);
 
       return {
-        certificatePath: uploadedPath,
+        certificatePath: fullPublicUrl, // Return full URL
         signedUrl,
       };
     } catch (error) {
@@ -347,13 +359,17 @@ export class CertificatesService {
       pdfBuffer,
     );
 
+    // ✅ Get full public URL for saving in database (if needed)
+    const fullPublicUrl = this.supabaseService.getCertificatePublicUrl(uploadedPath);
+    this.logger.log(`[CertificatesService] 🔗 Full public URL: ${fullPublicUrl}`);
+
     // Generate signed URL
     const signedUrl = await this.supabaseService.createSignedUrl(uploadedPath);
 
-    this.logger.log(`Portfolio summary certificate generated: ${uploadedPath}`);
+    this.logger.log(`Portfolio summary certificate generated: ${fullPublicUrl}`);
 
     return {
-      certificatePath: uploadedPath,
+      certificatePath: fullPublicUrl, // Return full URL
       signedUrl,
     };
   }
@@ -393,8 +409,19 @@ export class CertificatesService {
       return result.signedUrl;
     }
 
-    this.logger.log(`Certificate exists, returning signed URL: ${transaction.certificatePath}`);
-    return await this.supabaseService.createSignedUrl(transaction.certificatePath);
+    // Check if certificatePath is already a full URL or relative path
+    if (transaction.certificatePath.startsWith('http://') || transaction.certificatePath.startsWith('https://')) {
+      // It's already a full URL, return it directly (or create signed URL for private buckets)
+      this.logger.log(`Certificate exists (full URL), creating signed URL from: ${transaction.certificatePath}`);
+      // Extract relative path from full URL for signed URL generation
+      const urlParts = transaction.certificatePath.split('/storage/v1/object/public/certificates/');
+      const relativePath = urlParts.length > 1 ? urlParts[1] : transaction.certificatePath;
+      return await this.supabaseService.createSignedUrl(relativePath);
+    } else {
+      // It's a relative path (old format), create signed URL
+      this.logger.log(`Certificate exists (relative path), creating signed URL: ${transaction.certificatePath}`);
+      return await this.supabaseService.createSignedUrl(transaction.certificatePath);
+    }
   }
 
   /**

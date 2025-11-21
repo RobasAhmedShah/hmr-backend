@@ -112,6 +112,17 @@ export class SupabaseService implements OnModuleInit {
   }
 
   /**
+   * Get full public URL for certificate (for saving in database)
+   */
+  getCertificatePublicUrl(filePath: string): string {
+    const { data } = this.supabase.storage
+      .from(this.certificatesBucket)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  /**
    * Check if file exists in certificates bucket
    */
   async certificateExists(filePath: string): Promise<boolean> {
