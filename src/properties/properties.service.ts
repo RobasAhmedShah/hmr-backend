@@ -132,6 +132,7 @@ export class PropertiesService {
     if (dto.country !== undefined) updateData.country = dto.country;
     if (dto.features !== undefined) updateData.features = dto.features;
     if (dto.images !== undefined) updateData.images = dto.images;
+    if (dto.documents !== undefined) updateData.documents = dto.documents;
 
     // Handle decimal fields
     if (dto.totalValueUSDT !== undefined) {

@@ -46,5 +46,8 @@ export class CreatePropertyDto {
 
   @IsOptional()
   images?: any;
+
+  @IsOptional()
+  documents?: any;
 }
 

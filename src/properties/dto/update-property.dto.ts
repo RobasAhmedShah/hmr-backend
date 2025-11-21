@@ -57,4 +57,8 @@ export class UpdatePropertyDto {
   @IsOptional()
   @IsObject()
   images?: any;
+
+  @IsOptional()
+  @IsObject()
+  documents?: any;
 }
