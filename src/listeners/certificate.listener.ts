@@ -23,29 +23,46 @@ export class CertificateListener {
   async handleInvestmentCompleted(event: InvestmentCompletedEvent) {
     try {
       this.logger.log(
-        `[CertificateListener] 📨 Event received for investment: ${event.investmentDisplayCode}, userId: ${event.userId}, propertyId: ${event.propertyId}`,
+        `[CertificateListener] 📨 Event received for investment: ${event.investmentDisplayCode}, transaction: ${event.transactionDisplayCode || 'N/A'}, userId: ${event.userId}, propertyId: ${event.propertyId}`,
       );
 
       // ✅ Add delay to ensure transaction is committed and visible
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Find the transaction for this investment
-      // Query the most recent transaction for this user and property
-      const transaction = await this.transactionRepo.findOne({
-        where: {
-          userId: event.userId,
-          propertyId: event.propertyId,
-          type: 'investment',
-          status: 'completed',
-        },
-        order: { createdAt: 'DESC' },
-        relations: ['user', 'property'], // Add relations for debugging
-      });
+      // Use transactionId from event if available, otherwise search for it
+      let transaction;
+      if (event.transactionId) {
+        // Direct lookup by transaction ID (more reliable)
+        transaction = await this.transactionRepo.findOne({
+          where: { id: event.transactionId },
+          relations: ['user', 'property'],
+        });
+        
+        if (!transaction) {
+          this.logger.warn(
+            `[CertificateListener] ⚠️ Transaction ${event.transactionId} not found, trying search method...`,
+          );
+        }
+      }
+
+      // Fallback: Search for transaction if direct lookup failed or transactionId not provided
+      if (!transaction) {
+        transaction = await this.transactionRepo.findOne({
+          where: {
+            userId: event.userId,
+            propertyId: event.propertyId,
+            type: 'investment',
+            status: 'completed',
+          },
+          order: { createdAt: 'DESC' },
+          relations: ['user', 'property'],
+        });
+      }
 
       if (!transaction) {
         this.logger.error(
           `[CertificateListener] ❌ No transaction found for investment ${event.investmentDisplayCode}. ` +
-          `Searched for: userId=${event.userId}, propertyId=${event.propertyId}, type=investment, status=completed`,
+          `Searched for: transactionId=${event.transactionId || 'N/A'}, userId=${event.userId}, propertyId=${event.propertyId}, type=investment, status=completed`,
         );
         
         // Try to find ANY transaction for this user/property for debugging
@@ -77,22 +94,30 @@ export class CertificateListener {
       );
 
       // Generate certificate asynchronously (don't block)
-      this.certificatesService
-        .generateTransactionCertificate(transaction.id)
-        .then((result) => {
-          this.logger.log(
-            `[CertificateListener] ✅ Certificate generated successfully for transaction ${transaction.displayCode}: ${result.certificatePath}`,
-          );
-        })
-        .catch((error) => {
-          this.logger.error(
-            `[CertificateListener] ❌ Failed to generate certificate for transaction ${transaction.id}:`,
-            error.stack || error.message || error,
-          );
-          // Log full error details
-          console.error('[CertificateListener] Full error:', error);
-          // Don't throw - certificate generation failure shouldn't break the system
-        });
+      // Use await to ensure errors are caught properly
+      try {
+        const result = await this.certificatesService.generateTransactionCertificate(
+          transaction.id,
+          event.investmentId, // Pass the specific investment ID to save certificate to
+        );
+        this.logger.log(
+          `[CertificateListener] ✅ Certificate generated successfully for transaction ${transaction.displayCode}: ${result.certificatePath}`,
+        );
+        
+        // Verify the certificatePath was saved to the investment
+        // The certificatesService should have already saved it, but let's verify
+        this.logger.log(
+          `[CertificateListener] ✅ Certificate path saved to investment ${event.investmentDisplayCode}: ${result.certificatePath}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `[CertificateListener] ❌ Failed to generate certificate for transaction ${transaction.id}:`,
+          error.stack || error.message || error,
+        );
+        // Log full error details
+        console.error('[CertificateListener] Full error:', error);
+        // Don't throw - certificate generation failure shouldn't break the system
+      }
     } catch (error) {
       this.logger.error('[CertificateListener] ❌ Failed to handle certificate generation:', error);
       console.error('[CertificateListener] Full error:', error);

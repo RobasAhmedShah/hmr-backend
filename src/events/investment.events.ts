@@ -16,6 +16,8 @@ export interface InvestmentCompletedEvent {
   amountUSDT: Decimal;
   investmentId: string;
   investmentDisplayCode: string;
+  transactionId: string; // Transaction ID for certificate generation
+  transactionDisplayCode: string; // Transaction display code
 }
 
 /**

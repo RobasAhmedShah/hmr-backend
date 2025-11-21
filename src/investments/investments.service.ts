@@ -140,7 +140,7 @@ export class InvestmentsService {
       };
     });
 
-    // ✅ NOW emit event AFTER transaction commits
+      // ✅ NOW emit event AFTER transaction commits
     try {
       const investmentEvent: InvestmentCompletedEvent = {
         eventId: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -155,6 +155,8 @@ export class InvestmentsService {
         amountUSDT: result.amountUSDT,
         investmentId: result.investment.id,
         investmentDisplayCode: result.investment.displayCode,
+        transactionId: result.transaction.id, // Add transaction ID to event
+        transactionDisplayCode: result.transaction.displayCode, // Add transaction display code
       };
 
       this.eventEmitter.emit('investment.completed', investmentEvent);

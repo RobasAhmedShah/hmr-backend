@@ -58,7 +58,10 @@ export class CertificatesService {
   /**
    * Generate transaction certificate PDF
    */
-  async generateTransactionCertificate(transactionId: string): Promise<{
+  async generateTransactionCertificate(
+    transactionId: string,
+    investmentId?: string, // Optional: specific investment ID to update
+  ): Promise<{
     certificatePath: string;
     signedUrl: string;
   }> {
@@ -190,21 +193,39 @@ export class CertificatesService {
       this.logger.log(`[CertificatesService] 💾 Saved certificate path (full URL) to transaction: ${fullPublicUrl}`);
 
       // ✅ ALSO save certificatePath (full URL) to investments table
+      // If investmentId is provided, update that specific investment
+      // Otherwise, update the most recent investment for this user/property
       if (transaction.userId && transaction.propertyId) {
-        const investment = await this.investmentRepo.findOne({
-          where: {
-            userId: transaction.userId,
-            propertyId: transaction.propertyId,
-          },
-          order: { createdAt: 'DESC' }, // Get the most recent investment
-        });
+        let investment: Investment | null = null;
+        
+        if (investmentId) {
+          // Update the specific investment from the event
+          investment = await this.investmentRepo.findOne({
+            where: { id: investmentId },
+          });
+          
+          if (!investment) {
+            this.logger.warn(`[CertificatesService] ⚠️ Investment ${investmentId} not found, trying to find by user/property...`);
+          }
+        }
+        
+        // Fallback: Find the most recent investment if specific ID not found or not provided
+        if (!investment) {
+          investment = await this.investmentRepo.findOne({
+            where: {
+              userId: transaction.userId,
+              propertyId: transaction.propertyId,
+            },
+            order: { createdAt: 'DESC' }, // Get the most recent investment
+          });
+        }
 
         if (investment) {
           investment.certificatePath = fullPublicUrl;
           await this.investmentRepo.save(investment);
-          this.logger.log(`[CertificatesService] 💾 Saved certificate path (full URL) to investment ${investment.displayCode}: ${fullPublicUrl}`);
+          this.logger.log(`[CertificatesService] 💾 Saved certificate path (full URL) to investment ${investment.displayCode} (${investment.id}): ${fullPublicUrl}`);
         } else {
-          this.logger.warn(`[CertificatesService] ⚠️ Investment not found for userId=${transaction.userId}, propertyId=${transaction.propertyId}`);
+          this.logger.warn(`[CertificatesService] ⚠️ Investment not found for userId=${transaction.userId}, propertyId=${transaction.propertyId}, investmentId=${investmentId || 'N/A'}`);
         }
       }
 
